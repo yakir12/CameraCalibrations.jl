@@ -1,5 +1,5 @@
-channels = ["conda-forge", "cudawarped"]
+channels = ["conda-forge"]
 
 [deps]
 numpy = ""
-opencv-contrib-python = ""
+opencv = ""
