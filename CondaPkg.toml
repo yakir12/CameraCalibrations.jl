@@ -1,5 +1,6 @@
-channels = ["conda-forge"]
+channels = ["conda-forge", "fastai"]
 
 [deps]
 opencv = ""
 numpy = ""
+opencv-python-headless = ""
