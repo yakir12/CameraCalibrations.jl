@@ -1,5 +1,5 @@
-channels = ["conda-forge", "fastai"]
+channels = ["conda-forge", "cudawarped"]
 
 [deps]
 numpy = ""
-opencv-python = ""
+opencv-contrib-python = ""
