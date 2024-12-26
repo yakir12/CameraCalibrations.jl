@@ -4,6 +4,7 @@ using LinearAlgebra, Statistics, Random
 import ImageIO, FileIO
 using PythonCall, ImageBase, StaticArrays, ImageDraw, ImageTransformations
 using Rotations, CoordinateTransformations, Polynomials
+using OpenCV_jll
 
 using JSON3, StructTypes
 
