@@ -27,12 +27,14 @@ function draw_crosses!(img, imgpoint, n1, color)
     draw!(img, Cross.(Point.(CartesianIndex.(Tuple.(ij))), radius), color)
 end
 
+plot(::Nothing, c::Calibration, imgpointss, n_corners, checker_size, sz) = nothing
+
 """
     plot
 Save to locally created directory `debug` all the calibration's images after rectification. Blue crosses indicate detetcted corners, and red crosses indicate their rectificated real-world locations. Ideally, both crosses' centers are right on top of each other.
 """
-function plot(c::Calibration, imgpointss, n_corners, checker_size, sz)
-    dir = mkpath("debug")
+function plot(plot_folder, c::Calibration, imgpointss, n_corners, checker_size, sz)
+    dir = mkpath(plot_folder)
     for (file, imgpoints) in zip(c.files, imgpointss)
         img = RGB.(FileIO.load(file))
         draw_crosses!(img, imgpoints, n_corners[1], colorant"red")
@@ -41,4 +43,5 @@ function plot(c::Calibration, imgpointss, n_corners, checker_size, sz)
         draw_crosses!(imgw, itform.(imgpoints), n_corners[1], colorant"blue")
         FileIO.save(joinpath(dir, basename(file)), parent(imgw))
     end
+    return nothing
 end

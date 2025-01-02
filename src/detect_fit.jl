@@ -27,6 +27,7 @@ function _detect_corners(file, n_corners)
 
     img = cv2.imread(file)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # ret, py_corners = cv2.findChessboardCorners(gray, n_corners, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE)
     ret, py_corners = cv2.findChessboardCorners(gray, n_corners, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE + cv2.CALIB_CB_FAST_CHECK)
 
     !Bool(ret) && return missing
@@ -74,6 +75,8 @@ end
 
 function detect_fit(_files, n_corners, with_distortion, aspect)
     files, imgpointss = detect_corners(_files, n_corners)
+
+    @assert !isempty(files) "no corners were detected in any of the images"
 
     objpoints = get_object_points(n_corners)
     sz = size(FileIO.load(files[1]))

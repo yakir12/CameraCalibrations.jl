@@ -9,7 +9,7 @@ end
     Calibration(files, n_corners, checker_size, extrinsic_index)
 Build a calibration object. `files` are the image files of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `with_distortion` controls if radial lens distortion is included in the model or not.
 """
-function fit(files, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, with_plot = false)
+function fit(files, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing)
 
     files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(unique(files), n_corners, with_distortion, aspect)
     objpoints .*= checker_size
@@ -19,9 +19,7 @@ function fit(files, n_corners, checker_size; aspect = 1, with_distortion = true,
     # cf = improve(c, improve_n, improve_threshold, aspect, with_distortion)
 
     ϵ = calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners, inverse_samples)
-    if with_plot
-        plot(c, imgpointss, n_corners, checker_size, sz)
-    end
+    plot(plot_folder, c, imgpointss, n_corners, checker_size, sz)
     return (c, ϵ)
 end
 
