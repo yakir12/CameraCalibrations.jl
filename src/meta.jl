@@ -6,7 +6,7 @@ const LM3 = LinearMap{SDiagonal{3, Float64}}
     RowCol(row, col)
 An alias for a static vector of two, row and column, indicating a cartesian coordinate in an image/matrix.
 """
-const RowCol = SVector{2, <: Real}
+const RowCol = SVector{2, Float32}
 
 """
     XYZ(x, y, z)

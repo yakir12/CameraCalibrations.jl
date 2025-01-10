@@ -11,7 +11,7 @@ end
 
 function generate_checkerboard(n_corners, n) 
     xys = [n .* SVector{2, Float32}(Tuple(ij)) - SVector(0.5, 0.5) for ij in CartesianIndices(StepRange.(n_corners .+ 1, -1, 2))]
-    # reverse!(xys, dims = 1)
+    reverse!(xys, dims = 1)
     img = index2bw.(CartesianIndices(n_corners .+ 1))
     imgl = kron(PaddedView(true, img, UnitRange.(0, n_corners .+ 2)), ones(Int, n, n))
     # imgw = imfilter(imgl, Kernel.gaussian(2))

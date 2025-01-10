@@ -1,5 +1,0 @@
-channels = ["conda-forge"]
-
-[deps]
-numpy = ""
-opencv = ""
