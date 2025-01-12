@@ -48,11 +48,12 @@ not good:
 # explore more sizes, smaller ones, maybe there is a threshold
 # this can work I'd push it
 
-(n_corners, ratio) = ((4, 3) , 95)
+(n_corners, ratio) = ((3, 4) , 95)
 xys1, img = generate_checkerboard(n_corners, ratio);
 file = "$n_corners.png"
 FileIO.save(file, Gray.(img));
-xys2 = CameraCalibrations._detect_corners(file, n_corners)[2]
+xys2 = CameraCalibrations._detect_corners(file, reverse(n_corners))[2]
+
 if xys2[1][1] > xys2[end][1]
     reverse!(xys2)
 end
