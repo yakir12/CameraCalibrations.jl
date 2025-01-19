@@ -1,5 +1,5 @@
-using Revise
-using UnicodePlots
+# using Revise
+# using UnicodePlots
 using CameraCalibrations
 using Test
 using Aqua
@@ -20,84 +20,18 @@ function generate_checkerboard(n_corners, n)
     return xys, imgl
 end
 
-
-w, h, ratio = 5, 10, 100;
-n_corners = (w, h);
-xys, img = generate_checkerboard(n_corners, ratio);
-hor = "horizontal.png";
-FileIO.save(hor, Gray.(img));
-ver = "vertical.png";
-FileIO.save(ver, Gray.(permutedims(img, (2,1))));
-
-_sort(n_corners) = begin
-    if !issorted(n_corners)
-        n_corners = Tuple(sort([n_corners...]))
-    else
-        n_corners
-    end
+function calc_rms(xys1::Matrix, xys2::Matrix)
+    min(sqrt(mean(LinearAlgebra.norm_sqr.(xys2 .- xys1))), sqrt(mean(LinearAlgebra.norm_sqr.(reverse(xys2) .- xys1))))
 end
 
-good:
-13, 14 
-14, 13
-not good: 
-14, 15
-15, 14
-
-# TODO: need to understand how the corners flip in different slized chessboards, weird.
-# explore more sizes, smaller ones, maybe there is a threshold
-# this can work I'd push it
-
-(n_corners, ratio) = ((3, 4) , 95)
-xys1, img = generate_checkerboard(n_corners, ratio);
-file = "$n_corners.png"
-FileIO.save(file, Gray.(img));
-xys2 = CameraCalibrations._detect_corners(file, reverse(n_corners))[2]
-
-if xys2[1][1] > xys2[end][1]
-    reverse!(xys2)
-end
-# display(lineplot(first.(vec(xys1)), last.(vec(xys1)); width=:auto))
-# display(lineplot(first.(vec(xys2)), last.(vec(xys2)); width=:auto))
-# xys1 .- xys2
-[vec(xys1) vec(xys2)]
-
-
-xys = CameraCalibrations._detect_corners(file, _sort(reverse(n_corners)))[2]
-display(lineplot(first.(xys), last.(xys)))#; width=:auto))
-
-
-
-function fun()
-    w, h, ratio = 5, 10, 100;
-    n_corners = (w, h);
-    xys, img = generate_checkerboard(n_corners, ratio);
-    file = joinpath(path, "img.png");
-    FileIO.save(file, Gray.(img));
-    xys2 = CameraCalibrations._detect_corners(file, n_corners)[2];
-    display(lineplot(first.(xys2), last.(xys2)))#; width=:auto))
-    xys2 = CameraCalibrations._detect_corners(file, reverse(n_corners))[2];
-    display(lineplot(first.(xys2), last.(xys2)))#; width=:auto))
-    n_corners = reverse(n_corners)
-    xys, img = generate_checkerboard(n_corners, ratio);
-    file = joinpath(path, "img.png");
-    FileIO.save(file, Gray.(img));
-    xys2 = CameraCalibrations._detect_corners(file, n_corners)[2];
-    display(lineplot(first.(xys2), last.(xys2)))#; width=:auto))
-    xys2 = CameraCalibrations._detect_corners(file, reverse(n_corners))[2];
-    display(lineplot(first.(xys2), last.(xys2)))#; width=:auto))
-end
-fun()
-
-
-function calc_rms(n_corners, ratio)
+function calc_rms(n_corners::NTuple{2, Int}, ratio::Int)
     xys, img = generate_checkerboard(n_corners, ratio)
     mktempdir() do path
         # path = mktempdir(; cleanup = false)
         file = joinpath(path, "img.png")
         FileIO.save(file, Gray.(img))
         res = CameraCalibrations._detect_corners(file, n_corners)
-        return !ismissing(res) && sqrt(mean(LinearAlgebra.norm_sqr.(xys .- res[2])))
+        return !ismissing(res) && calc_rms(xys, res[2])
     end
 end
 
@@ -133,23 +67,19 @@ end
         @testset "In artificial images" begin
             for w in 13:15, h in 13:15, ratio in 95:100
                 if isodd(w) ≠ isodd(h)
-                    # w, h, ratio = 15, 14, 100
                     n_corners = (w, h)
-                    @show n_corners, ratio
-                    @show calc_rms(n_corners, ratio)
-                    # @test calc_rms(n_corners, ratio) < 1
+                    @test calc_rms(n_corners, ratio) ≈ 0
                 end
             end
         end
 
-        # # Threading doesn't work at all
-        # @testset "In artificial images (threaded)" begin
-        #     xs = [((w, h), r) for w in 13:15 for h in 13:15 for r in 95:100 if isodd(w) ≠ isodd(h)]
-        #     Threads.@threads for i in 1:length(xs)
-        #         n_corners, ratio = xs[i]
-        #         @test compare(n_corners, ratio)
-        #     end
-        # end
+        @testset "In artificial images (threaded)" begin
+            xs = [((w, h), r) for w in 13:15 for h in 13:15 for r in 95:100 if isodd(w) ≠ isodd(h)]
+            Threads.@threads for i in 1:length(xs)
+                n_corners, ratio = xs[i]
+                @test calc_rms(n_corners, ratio) ≈ 0
+            end
+        end
 
         @testset "In real images" begin
             dir = joinpath(@__DIR__(), "example")
@@ -160,13 +90,14 @@ end
             for file in files
                 res = CameraCalibrations._detect_corners(file, n_corners)
                 target_corners = target[basename(file)]
-                @test !ismissing(res) && all(<(1), norm.(target_corners .- vec(res[2])))
+                @test !ismissing(res) && calc_rms(collect(reshape(target_corners, n_corners)), res[2]) < 1e-4
             end
         end
 
     end
 
     @testset "Full calibration" begin
+
         n_corners = (5, 8)
         dir = joinpath(@__DIR__(), "example")
         files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
@@ -184,6 +115,7 @@ end
             i = RowCol(1,2)
             @test f(i) == c(i, 1)[[1,2]]
         end
+
     end
 
     @testset "IO" begin
@@ -227,5 +159,26 @@ end
         end
     end
 
+    @testset "Full calibration with a different $aspect ratios (threaded)" for aspect in 0.75:0.1:1.25
+        n_corners = (5, 8)
+        dir = joinpath(@__DIR__(), "example")
+        files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
+        checker_size = 1
+        mktempdir() do path
+            for file in files
+                img = FileIO.load(file)
+                img = imresize(img; ratio = (aspect, 1))
+                FileIO.save(joinpath(path, basename(file)), img)
+            end
+
+            files = readdir(path, join = true)
+            c, (n, ϵ...) = fit(files, n_corners, checker_size; aspect)
+
+            @testset "$k accuracy" for (k, v) in pairs(ϵ)
+                @test v < 1
+            end
+
+        end
+    end
 
 end

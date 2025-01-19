@@ -49,7 +49,7 @@ function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_c
         end
 
         inverse += sum(1:inverse_samples) do _
-            rc = rand(RowCol{Float64}) .* (sz .- 1) .+ 1
+            rc = rand(RowCol) .* (sz .- 1) .+ 1
             projected = c(rc, i)
             reprojected = c(projected, i)
             LinearAlgebra.norm_sqr(rc .- reprojected)

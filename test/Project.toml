@@ -1,8 +1,0 @@
-[deps]
-CameraCalibrations = "70c3cbac-2c23-4b2d-966c-5a25c0a540fb"
-ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-ImageTransformations = "02fcd773-0e25-5acc-982a-7f6622650795"
-JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-PaddedViews = "5432bcbf-9aad-5242-b902-cca2824c8663"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"

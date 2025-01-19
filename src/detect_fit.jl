@@ -4,8 +4,8 @@ Wraps OpenCV function to auto-detect corners in an image.
 """
 function _detect_corners(img_file, n_corners)
     gry = OpenCV.imread(img_file, OpenCV.IMREAD_GRAYSCALE)
-    # corners = Matrix{RowCol}(undef, n_corners)
-    corners = Vector{RowCol}(undef, prod(n_corners))
+    corners = Matrix{RowCol}(undef, n_corners)
+    # corners = Vector{RowCol}(undef, prod(n_corners))
     ret, _ = OpenCV.findChessboardCorners(gry, OpenCV.Size{Int32}(n_corners...), OpenCV.Mat(reshape(reinterpret(Float32, corners), 2, 1, prod(n_corners))), 0)
     return ret ? (img_file, corners) : missing
     # ref_corners = OpenCV.cornerSubPix(gry, cv_corners, OpenCV.Size{Int32}(11,11), OpenCV.Size{Int32}(-1,-1), CRITERIA)
@@ -18,7 +18,8 @@ Wraps OpenCV function to fit a camera model to given object and image points.
 """
 function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect)
     cammat = convert(Matrix{Float64}, I(3))
-    cammat[1] = aspect
+    cammat[1] = 1
+    cammat[2, 2] = aspect
     dist = Vector{Float64}(undef, 5)
     nfiles = length(imgpointss)
     r = [Vector{Float64}(undef, 3) for _ in 1:nfiles]
@@ -34,7 +35,7 @@ function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect
                                                          OpenCV.InputArray[OpenCV.Mat(reshape(ri, 1, 1, 3)) for ri in r], 
                                                          OpenCV.InputArray[OpenCV.Mat(reshape(ti, 1, 1, 3)) for ti in t], flags, CRITERIA)
 
-    return (; k = dist[1], Rs = r, ts = t, frow = cammat[1,1], fcol = cammat[2,2], crow = cammat[1,3], ccol = cammat[2,3])
+    return (; k = dist[1], Rs = r, ts = t, frow = cammat[1,1], fcol = cammat[2,2], crow = cammat[3,1], ccol = cammat[3,2])
 end
 
 function detect_fit(_files, n_corners, with_distortion, aspect)
