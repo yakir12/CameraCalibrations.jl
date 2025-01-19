@@ -6,6 +6,8 @@ using ImageBase, StaticArrays, ImageDraw, ImageTransformations
 using Rotations, CoordinateTransformations, Polynomials
 using OpenCV
 using JSON3, StructTypes
+using OhMyThreads
+
 const CRITERIA = OpenCV.TermCriteria(OpenCV.TERM_CRITERIA_EPS + OpenCV.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 export fit, Calibration, CalibrationIO, rectification, RowCol, XYZ

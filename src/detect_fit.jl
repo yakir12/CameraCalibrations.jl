@@ -5,7 +5,6 @@ Wraps OpenCV function to auto-detect corners in an image.
 function _detect_corners(img_file, n_corners)
     gry = OpenCV.imread(img_file, OpenCV.IMREAD_GRAYSCALE)
     corners = Matrix{RowCol}(undef, n_corners)
-    # corners = Vector{RowCol}(undef, prod(n_corners))
     ret, _ = OpenCV.findChessboardCorners(gry, OpenCV.Size{Int32}(n_corners...), OpenCV.Mat(reshape(reinterpret(Float32, corners), 2, 1, prod(n_corners))), 0)
     return ret ? (img_file, corners) : missing
     # ref_corners = OpenCV.cornerSubPix(gry, cv_corners, OpenCV.Size{Int32}(11,11), OpenCV.Size{Int32}(-1,-1), CRITERIA)
@@ -39,12 +38,12 @@ function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect
 end
 
 function detect_fit(_files, n_corners, with_distortion, aspect)
-    sz = size(FileIO.load(first(_files)))
-    fi = skipmissing(_detect_corners.(_files, Ref(n_corners)))
-    @assert !isempty(fi) "No checkers were detected in any of the images, perhaps try a different `n_corners`."
+    fi = skipmissing(tcollect(_detect_corners(_file, n_corners) for _file in _files))
+    @assert !isempty(fi) "No checkers were detected in any of the images, perhaps try a different `n_corners` (e.g. not $n_corners)"
     files = first.(fi)
     imgpointss = last.(fi)
     objpoints = XYZ.(Tuple.(CartesianIndices((0:(n_corners[1] - 1), 0:(n_corners[2] - 1), 0:0))))
+    sz = size(FileIO.load(first(files)))
     k, Rs, ts, frow, fcol, crow, ccol = fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect)
     return (; files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol)
 end
