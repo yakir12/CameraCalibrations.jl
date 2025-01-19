@@ -1,5 +1,3 @@
-# using Revise
-# using UnicodePlots
 using CameraCalibrations
 using Test
 using Aqua
@@ -16,7 +14,6 @@ function generate_checkerboard(n_corners, n)
     reverse!(xys, dims = issorted(n_corners) ? 1 : 2)
     img = index2bw.(CartesianIndices(n_corners .+ 1))
     imgl = kron(PaddedView(true, img, UnitRange.(0, n_corners .+ 2)), ones(Int, n, n))
-    # imgw = imfilter(imgl, Kernel.gaussian(2))
     return xys, imgl
 end
 
@@ -27,7 +24,6 @@ end
 function calc_rms(n_corners::NTuple{2, Int}, ratio::Int)
     xys, img = generate_checkerboard(n_corners, ratio)
     mktempdir() do path
-        # path = mktempdir(; cleanup = false)
         file = joinpath(path, "img.png")
         FileIO.save(file, Gray.(img))
         res = CameraCalibrations._detect_corners(file, n_corners)
@@ -35,6 +31,7 @@ function calc_rms(n_corners::NTuple{2, Int}, ratio::Int)
     end
 end
 
+#################### Create the corners.json file
 # using ImageDraw
 # dir = joinpath(@__DIR__(), "example")
 # files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
@@ -56,6 +53,7 @@ end
 # open("example/corners.json", "w") do io
 #     print(io, JSON3.write(d))
 # end
+####################
 
 @testset "CameraCalibrations.jl" begin
     @testset "Code quality (Aqua.jl)" begin
