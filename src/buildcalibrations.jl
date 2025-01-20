@@ -11,8 +11,8 @@ Build a calibration object. `files` are the image files of the checkerboard. `n_
 """
 function fit(files, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing)
 
-    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(unique(files), n_corners, with_distortion, aspect)
-    objpoints .*= checker_size
+    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(files, n_corners, with_distortion, aspect)
+    objpoints = objpoints .* checker_size
     intrinsic, extrinsics, scale = obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
     c = Calibration(intrinsic, extrinsics, scale, k, files)
 
@@ -32,7 +32,7 @@ end
     calculate_errors(c)
 Calculate reprojection, projection, distance, and inverse errors for the calibration `c`. `distance` measures the mean error of the distance between all adjacent checkerboard corners from the expected `checker_size`. `inverse` measures the mean error of applying the calibration's transformation and its inverse `inverse_samples` times.
 """
-function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners, inverse_samples=100)
+function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners, inverse_samples)
     # @show c.extrinsics
     reprojection = 0.0
     projection = 0.0
@@ -49,7 +49,7 @@ function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_c
         end
 
         inverse += sum(1:inverse_samples) do _
-            rc = rand(RowCol{Float64}) .* (sz .- 1) .+ 1
+            rc = rand(RowCol) .* (sz .- 1) .+ 1
             projected = c(rc, i)
             reprojected = c(projected, i)
             LinearAlgebra.norm_sqr(rc .- reprojected)
