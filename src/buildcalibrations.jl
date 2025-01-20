@@ -12,7 +12,7 @@ Build a calibration object. `files` are the image files of the checkerboard. `n_
 function fit(files, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing)
 
     files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(files, n_corners, with_distortion, aspect)
-    objpoints .*= checker_size
+    objpoints = objpoints .* checker_size
     intrinsic, extrinsics, scale = obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
     c = Calibration(intrinsic, extrinsics, scale, k, files)
 
