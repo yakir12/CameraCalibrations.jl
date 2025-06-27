@@ -30,11 +30,26 @@ function _detect_corners(file, n_corners)
     # ret, py_corners = cv2.findChessboardCorners(gray, n_corners, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE)
     ret, py_corners = cv2.findChessboardCorners(gray, n_corners, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE + cv2.CALIB_CB_FAST_CHECK)
 
+    # img = RGB.(FileIO.load(file))
+    # flp_corners = np.flip(py_corners, axis = 2)
+    # corners = convert_from_py_corners(flp_corners, n_corners)
+    # draw_crosses!(img, corners, n_corners[1], colorant"green")
+
     !Bool(ret) && return missing
 
-    ref_corners = cv2.cornerSubPix(gray, py_corners, (11,11),(-1,-1), criteria)
-    flp_corners = np.flip(ref_corners, axis = 2)
+    flp_corners = np.flip(py_corners, axis = 2)
     corners = convert_from_py_corners(flp_corners, n_corners)
+
+    # ref_corners = cv2.cornerSubPix(gray, py_corners, (3,3),(-1,-1), criteria)
+    # flp_corners = np.flip(ref_corners, axis = 2)
+    # corners = convert_from_py_corners(flp_corners, n_corners)
+    #
+    # ij = vec([round.(Int, rc) for rc in corners])
+    # radius = 1
+    # color = colorant"red"
+    # img[CartesianIndex.(Tuple.(ij))] .= color
+    # FileIO.save("/home/yakir/new_projects/bastien/fromage/$(basename(file))", img)
+
     return (file, reverse(corners, dims = 1))
 end
 
