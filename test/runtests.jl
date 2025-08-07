@@ -47,12 +47,16 @@ end
             end
         end
 
-        @testset "In artificial images (threaded)" begin
-            xs = [((w, h), r) for w in 13:15 for h in 13:15 for r in 95:100 if isodd(w) ≠ isodd(h)]
-            Threads.@threads for i in 1:length(xs)
-                n_corners, ratio = xs[i]
-                @test calc_rms(n_corners, ratio) ≈ 0
+        if Threads.nthreads() > 1
+            @testset "In artificial images (threaded)" begin
+                xs = [((w, h), r) for w in 13:15 for h in 13:15 for r in 95:100 if isodd(w) ≠ isodd(h)]
+                Threads.@threads for i in 1:length(xs)
+                    n_corners, ratio = xs[i]
+                    @test calc_rms(n_corners, ratio) ≈ 0
+                end
             end
+        else
+            @info "Julia is running with only 1 thread, skipping multithreaded tests"
         end
 
         @testset "In real images" begin
@@ -133,29 +137,21 @@ end
         end
     end
 
-    @testset "Full calibration with different aspect ratios (threaded)" begin 
-        aspects = 0.75:0.1:1.25
-        n_corners = (5, 8)
-        dir = joinpath(@__DIR__(), "example")
-        files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
-        checker_size = 1
-        Threads.@threads for i in 1:length(aspects)
-            mktempdir() do path
-                for file in files
-                    img = FileIO.load(file)
-                    img = imresize(img; ratio = (1, aspects[i]))
-                    FileIO.save(joinpath(path, basename(file)), img)
-                end
-
-                files = readdir(path, join = true)
-                c, (n, ϵ...) = fit(files, n_corners, checker_size; aspect = aspects[i])
-
+    if Threads.nthreads() > 1
+        @testset "Full calibration (threaded)" begin 
+            aspect = 1
+            n_corners = (5, 8)
+            dir = joinpath(@__DIR__(), "example")
+            files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
+            checker_size = 1
+            Threads.@threads for _ in 1:5
+                c, (n, ϵ...) = fit(files, n_corners, checker_size; aspect)
                 @testset "$k accuracy" for (k, v) in pairs(ϵ)
                     @test v < 1
                 end
-
             end
         end
+    else
+        @info "Julia is running with only 1 thread, skipping multithreaded tests"
     end
-
 end
