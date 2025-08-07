@@ -3,9 +3,10 @@
 Wraps OpenCV function to auto-detect corners in an image.
 """
 function _detect_corners(img_file, n_corners)
-    gry = OpenCV.imread(img_file, OpenCV.IMREAD_GRAYSCALE)
+    img = Gray.(FileIO.load(img_file))
+    gry = OpenCV.Mat(reshape(rawview(channelview(img)), 1, size(img)...))
     corners = Matrix{RowCol}(undef, n_corners)
-    ret, _ = OpenCV.findChessboardCorners(gry, OpenCV.Size{Int32}(n_corners...), OpenCV.Mat(reshape(reinterpret(Float32, corners), 2, 1, prod(n_corners))), 0)
+    ret, _ = OpenCV.findChessboardCorners(gry, OpenCV.Size{Int32}(n_corners...), OpenCV.Mat(reshape(reinterpret(Float32, corners), 2, 1, prod(n_corners))), OpenCV.CALIB_CB_ADAPTIVE_THRESH + OpenCV.CALIB_CB_NORMALIZE_IMAGE + OpenCV.CALIB_CB_FAST_CHECK)
     return ret ? (img_file, corners) : missing
     # ref_corners = OpenCV.cornerSubPix(gry, cv_corners, OpenCV.Size{Int32}(11,11), OpenCV.Size{Int32}(-1,-1), CRITERIA)
     # corners = reshape(RowCol.(eachslice(ref_corners, dims = 3)), n_corners)

@@ -10,8 +10,8 @@ function index2bw(ij::CartesianIndex)
 end
 
 function generate_checkerboard(n_corners, n) 
-    xys = [n .* SVector{2, Float32}(reverse(Tuple(ij))) - SVector(0.5, 0.5) for ij in CartesianIndices(StepRange.(2, 1, n_corners .+ 1))]
-    reverse!(xys, dims = issorted(n_corners) ? 1 : 2)
+    xys = [n .* SVector{2, Float32}(Tuple(ij)) - SVector(0.5, 0.5) for ij in CartesianIndices(StepRange.(2, 1, n_corners .+ 1))]
+    # reverse!(xys, dims = issorted(n_corners) ? 1 : 2)
     img = index2bw.(CartesianIndices(n_corners .+ 1))
     imgl = kron(PaddedView(true, img, UnitRange.(0, n_corners .+ 2)), ones(Int, n, n))
     return xys, imgl
@@ -30,30 +30,6 @@ function calc_rms(n_corners::NTuple{2, Int}, ratio::Int)
         return !ismissing(res) && calc_rms(xys, res[2])
     end
 end
-
-#################### Create the corners.json file
-# using ImageDraw
-# dir = joinpath(@__DIR__(), "example")
-# files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
-# n = length(files)
-# n_corners = (5, 8)
-# d = Dict()
-# for file in files
-#     res = CameraCalibrations._detect_corners(file, n_corners)
-#     if !ismissing(res) 
-#         _, xys = res
-#         img = RGB.(FileIO.load(file))
-#         for xy in xys
-#             draw!(img, Cross(Point(round.(Int, reverse(xy))...), 5), RGB(1,0,0))
-#         end
-#         FileIO.save(basename(file), img)
-#         d[basename(file)] = vec(xys)
-#     end
-# end
-# open("example/corners.json", "w") do io
-#     print(io, JSON3.write(d))
-# end
-####################
 
 @testset "CameraCalibrations.jl" begin
     @testset "Code quality (Aqua.jl)" begin
@@ -136,7 +112,7 @@ end
         mktempdir() do path
             for file in files
                 img = FileIO.load(file)
-                img = imresize(img; ratio = (aspect, 1))
+                img = imresize(img; ratio = (1, aspect))
                 FileIO.save(joinpath(path, basename(file)), img)
             end
 
@@ -157,25 +133,28 @@ end
         end
     end
 
-    @testset "Full calibration with a different $aspect ratios (threaded)" for aspect in 0.75:0.1:1.25
+    @testset "Full calibration with different aspect ratios (threaded)" begin 
+        aspects = 0.75:0.1:1.25
         n_corners = (5, 8)
         dir = joinpath(@__DIR__(), "example")
         files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
         checker_size = 1
-        mktempdir() do path
-            for file in files
-                img = FileIO.load(file)
-                img = imresize(img; ratio = (aspect, 1))
-                FileIO.save(joinpath(path, basename(file)), img)
+        Threads.@threads for i in 1:length(aspects)
+            mktempdir() do path
+                for file in files
+                    img = FileIO.load(file)
+                    img = imresize(img; ratio = (1, aspects[i]))
+                    FileIO.save(joinpath(path, basename(file)), img)
+                end
+
+                files = readdir(path, join = true)
+                c, (n, ϵ...) = fit(files, n_corners, checker_size; aspect = aspects[i])
+
+                @testset "$k accuracy" for (k, v) in pairs(ϵ)
+                    @test v < 1
+                end
+
             end
-
-            files = readdir(path, join = true)
-            c, (n, ϵ...) = fit(files, n_corners, checker_size; aspect)
-
-            @testset "$k accuracy" for (k, v) in pairs(ϵ)
-                @test v < 1
-            end
-
         end
     end
 

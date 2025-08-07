@@ -28,11 +28,13 @@ i2 ≈ i1 # true
 ```
 
 ## Features
+- [x] thread safe
 - [x] saving and loading (JSON) calibration files
 - [x] corner detection is done with opencv
 - [x] model fitting is done with opencv
-- [x] opencv is python-free, via OpenCV.jl
+- [x] opencv is python-free, via `OpenCV.jl`
 - [x] plot calibrated images
+- [x] allows for calibration images that were saved with an aspect ration ≠ 1
 - [ ] in-memory images
 - [ ] images from video IO
 

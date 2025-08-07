@@ -37,6 +37,7 @@ function plot(plot_folder, c::Calibration, imgpointss, n_corners, checker_size, 
     dir = mkpath(plot_folder)
     for (file, imgpoints) in zip(c.files, imgpointss)
         img = RGB.(FileIO.load(file))
+        # img = RGB.(permutedims(FileIO.load(file)))
         draw_crosses!(img, imgpoints, n_corners[1], colorant"red")
         tform, itform, axs = image_transformations(c, findfirst(==(file), c.files), imgpointss, checker_size, n_corners, sz)
         imgw = warp(img, tform, axs)
