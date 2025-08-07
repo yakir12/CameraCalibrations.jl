@@ -30,10 +30,19 @@ save(file, cio::CalibrationIO) = open(file, "w") do io
 end
 
 save(file, c::Calibration) = save(file, CalibrationIO(c.intrinsic, c.extrinsics, c.scale, c.k, c.files))
-
-
-
-
+#
+#
+# function load(file)
+#
+#     file = "tmp.calib"
+#
+#     open(file, "w") do o
+#         JSON.print(o, c)
+#     end
+#
+#     dict = JSON.parsefile(file)
+#
+#
 
 
 

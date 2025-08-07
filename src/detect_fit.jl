@@ -1,105 +1,50 @@
-# the following convertion functions are necessary due to some overly eager type checking in the python functions.
-convert_from_py_corners(py_corners, n_corners) = reshape(RowCol.(eachslice(PyArray(py_corners); dims = 1)), n_corners)
-
-convert_to_py_objpoints(objpoints, n) = PyList(fill(np.array(Float32.(reshape(reduce((x1, x2) -> hcat(x1, Vector(x2)), objpoints)', (1, length(objpoints), 3)))), n))
-
-convert_to_py_imgpointss(imgpointss) = PyList([np.array(reshape(reduce((x1, x2) -> hcat(x1, Vector(x2)), imgpoints)', 1, length(imgpoints), 2)) for imgpoints in imgpointss])
-
-"""
-    get_object_points
-Produce the real-world locations of the corners of the checkerboard.
-"""
-function get_object_points(n_corners)
-    objpoints = Matrix{XYZ}(undef, n_corners)
-    for i in CartesianIndices(n_corners)
-        x, y = Tuple(i) .- 1
-        objpoints[i] = XYZ(x, y, 0)
-    end
-    return objpoints
-end
-
 """
     _detect_corners
 Wraps OpenCV function to auto-detect corners in an image.
 """
-function _detect_corners(file, n_corners)
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-
-    img = cv2.imread(file)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # ret, py_corners = cv2.findChessboardCorners(gray, n_corners, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE)
-    ret, py_corners = cv2.findChessboardCorners(gray, n_corners, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE + cv2.CALIB_CB_FAST_CHECK)
-
-    # img = RGB.(FileIO.load(file))
-    # flp_corners = np.flip(py_corners, axis = 2)
-    # corners = convert_from_py_corners(flp_corners, n_corners)
-    # draw_crosses!(img, corners, n_corners[1], colorant"green")
-
-    !Bool(ret) && return missing
-
-    flp_corners = np.flip(py_corners, axis = 2)
-    corners = convert_from_py_corners(flp_corners, n_corners)
-
-    # ref_corners = cv2.cornerSubPix(gray, py_corners, (3,3),(-1,-1), criteria)
-    # flp_corners = np.flip(ref_corners, axis = 2)
-    # corners = convert_from_py_corners(flp_corners, n_corners)
-    #
-    # ij = vec([round.(Int, rc) for rc in corners])
-    # radius = 1
-    # color = colorant"red"
-    # img[CartesianIndex.(Tuple.(ij))] .= color
-    # FileIO.save("/home/yakir/new_projects/bastien/fromage/$(basename(file))", img)
-
-    return (file, reverse(corners, dims = 1))
-end
-
-function detect_corners(_files, n_corners)
-    fi = skipmissing(_detect_corners.(_files, Ref(n_corners)))
-    return (; files = first.(fi), imgpointss = last.(fi))
+function _detect_corners(img_file, n_corners)
+    img = Gray.(FileIO.load(img_file))
+    gry = OpenCV.Mat(reshape(rawview(channelview(img)), 1, size(img)...))
+    corners = Matrix{RowCol}(undef, n_corners)
+    ret, _ = OpenCV.findChessboardCorners(gry, OpenCV.Size{Int32}(n_corners...), OpenCV.Mat(reshape(reinterpret(Float32, corners), 2, 1, prod(n_corners))), OpenCV.CALIB_CB_ADAPTIVE_THRESH + OpenCV.CALIB_CB_NORMALIZE_IMAGE + OpenCV.CALIB_CB_FAST_CHECK)
+    return ret ? (img_file, corners) : missing
+    # ref_corners = OpenCV.cornerSubPix(gry, cv_corners, OpenCV.Size{Int32}(11,11), OpenCV.Size{Int32}(-1,-1), CRITERIA)
+    # corners = reshape(RowCol.(eachslice(ref_corners, dims = 3)), n_corners)
 end
 
 """
     fit_model
 Wraps OpenCV function to fit a camera model to given object and image points.
 """
-function fit_model(sz, objpoints, imgpointss, n_corners,  with_distortion, aspect)
-    flags = cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_FIX_K3 + cv2.CALIB_FIX_K2 + (with_distortion ? 0 : cv2.CALIB_FIX_K1) + cv2.CALIB_FIX_ASPECT_RATIO
+function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect)
+    cammat = convert(Matrix{Float64}, I(3))
+    cammat[1] = 1
+    cammat[2, 2] = aspect
+    dist = Vector{Float64}(undef, 5)
+    nfiles = length(imgpointss)
+    r = [Vector{Float64}(undef, 3) for _ in 1:nfiles]
+    t = [Vector{Float64}(undef, 3) for _ in 1:nfiles]
+    flags = OpenCV.CALIB_ZERO_TANGENT_DIST + OpenCV.CALIB_FIX_K3 + OpenCV.CALIB_FIX_K2 + (with_distortion ? 0 : OpenCV.CALIB_FIX_K1) + OpenCV.CALIB_FIX_ASPECT_RATIO
+    criteria = OpenCV.TermCriteria(OpenCV.TERM_CRITERIA_EPS + OpenCV.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    cammatrix = convert(Matrix{Float32}, I(3))
-    cammatrix[1] = aspect
+    OpenCV.calibrateCamera(OpenCV.InputArray[Float32.(reshape(stack(objpoints), 3, 1, :)) for _ in 1:nfiles], 
+                                                         OpenCV.InputArray[Float32.(reshape(stack(imgpoints), 2, 1, :)) for imgpoints in imgpointss], 
+                                                         OpenCV.Size{Int32}(sz...),  
+                                                         OpenCV.Mat(reshape(cammat, 1, 3, 3)), 
+                                                         OpenCV.Mat(reshape(dist, 1, 1, 5)), 
+                                                         OpenCV.InputArray[OpenCV.Mat(reshape(ri, 1, 1, 3)) for ri in r], 
+                                                         OpenCV.InputArray[OpenCV.Mat(reshape(ti, 1, 1, 3)) for ti in t], flags, CRITERIA)
 
-    cammatrix = np.ascontiguousarray(np.array(cammatrix)) # https://stackoverflow.com/a/50128836/2261957
-
-    _, py_mtx, py_dist, py_rvecs, py_tvecs = cv2.calibrateCamera(convert_to_py_objpoints(objpoints, length(imgpointss)), convert_to_py_imgpointss(imgpointss), np.flip(sz), cammatrix, nothing; flags)
-
-    k, _ = PyArray(py_dist)
-    @assert with_distortion || k == 0 "distortion was $with_distortion but k isn't zero:" k
-
-    Rs = [vec(pyconvert(Matrix{Float64}, x)) for x in py_rvecs]
-
-    ts = [vec(pyconvert(Matrix{Float64}, x)) for x in py_tvecs]
-
-    mtx = Matrix(PyArray(py_mtx))
-    frow = mtx[1,1]
-    fcol = mtx[2,2]
-    crow = mtx[1,3]
-    ccol = mtx[2,3]
-
-    return (; k, Rs, ts, frow, fcol, crow, ccol)
+    return (k = dist[1], Rs = r, ts = t, frow = cammat[1,1], fcol = cammat[2,2], crow = cammat[3,1], ccol = cammat[3,2])
 end
 
 function detect_fit(_files, n_corners, with_distortion, aspect)
-    files, imgpointss = detect_corners(_files, n_corners)
-
-    @assert !isempty(files) "no corners were detected in any of the images"
-
-    objpoints = get_object_points(n_corners)
-    sz = size(FileIO.load(files[1]))
-
+    fi = skipmissing(tcollect(_detect_corners(_file, n_corners) for _file in _files))
+    @assert !isempty(fi) "No checkers were detected in any of the images, perhaps try a different `n_corners` (e.g. not $n_corners)"
+    files = first.(fi)
+    imgpointss = last.(fi)
+    objpoints = XYZ.(Tuple.(CartesianIndices((0:(n_corners[1] - 1), 0:(n_corners[2] - 1), 0:0))))
+    sz = size(FileIO.load(first(files)))
     k, Rs, ts, frow, fcol, crow, ccol = fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect)
-
     return (; files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol)
 end
-
-
-
