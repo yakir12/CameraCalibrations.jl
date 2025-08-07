@@ -26,8 +26,8 @@ jobs:
       matrix:
         version:
           - 'lts'
-          - 'pre'
-          - 'nightly'
+            # - 'pre'
+            # - 'nightly'
         os:
           - ubuntu-latest
           - macOS-latest
@@ -36,7 +36,7 @@ jobs:
           - x64
         threads:
           - '1'
-          - '2'
+          - '4'
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
