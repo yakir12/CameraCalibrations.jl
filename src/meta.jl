@@ -87,18 +87,9 @@ Convert the x, y, z StaticArray `xyz` to its pixel-coordinate equivalent, `RowCo
 """
 (c::Calibration)(xyz::XYZ, extrinsic_index::Int) = c.real2image[extrinsic_index](xyz)
 
-function (c::Calibration)(xyz_or_i)
-    extrinsic_index = findfirst(contains(r"extrinsic"), c.files)
-    return c(xyz_or_i, extrinsic_index)
-end
-
 """
     rectification(c, extrinsic_index)
 Return a function that accepts an instance of `::RowCol` and converts it to its real-world equivalent for the extrinsic parameters from the `extrinsic_index` image, without its third dimension (which would be ≈ 0): an `xy` coordinate.
 """
 rectification(c::Calibration, extrinsic_index) = pop ∘ c.image2real[extrinsic_index]
-function rectification(c::Calibration) 
-    extrinsic_index = findfirst(contains(r"extrinsic"), c.files)
-    return pop ∘ c.image2real[extrinsic_index]
-end
 
