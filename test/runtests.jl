@@ -36,7 +36,9 @@ end
 
 @testset "CameraCalibrations.jl" begin
     @testset "Code quality (Aqua.jl)" begin
-        Aqua.test_all(CameraCalibrations; piracies = false)
+        Aqua.test_all(CameraCalibrations; 
+                      piracies = (; treat_as_own = [Diagonal]),
+                      stale_deps = (; ignore = [:ImageIO]))
     end
 
     @testset "Detect corners" begin
