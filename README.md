@@ -35,8 +35,7 @@ i2 ≈ i1 # true
 - [x] opencv is python-free, via `OpenCV.jl`
 - [x] plot calibrated images
 - [x] allows for calibration images that were saved with an aspect ration ≠ 1
-- [ ] in-memory images
-- [ ] images from video IO
+- [x] in-memory images
 
 ## Citing
 See [`CITATION.bib`](CITATION.bib) for the relevant reference(s).
