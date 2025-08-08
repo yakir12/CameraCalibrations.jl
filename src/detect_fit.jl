@@ -2,12 +2,11 @@
     _detect_corners
 Wraps OpenCV function to auto-detect corners in an image.
 """
-function _detect_corners(img_file, n_corners)
-    img = Gray.(FileIO.load(img_file))
+function _detect_corners(img, n_corners)
     gry = OpenCV.Mat(reshape(rawview(channelview(img)), 1, size(img)...))
     corners = Matrix{RowCol}(undef, n_corners)
     ret, _ = OpenCV.findChessboardCorners(gry, OpenCV.Size{Int32}(n_corners...), OpenCV.Mat(reshape(reinterpret(Float32, corners), 2, 1, prod(n_corners))), OpenCV.CALIB_CB_ADAPTIVE_THRESH + OpenCV.CALIB_CB_NORMALIZE_IMAGE + OpenCV.CALIB_CB_FAST_CHECK)
-    return ret ? (img_file, corners) : missing
+    return ret ? corners : missing
     # ref_corners = OpenCV.cornerSubPix(gry, cv_corners, OpenCV.Size{Int32}(11,11), OpenCV.Size{Int32}(-1,-1), CRITERIA)
     # corners = reshape(RowCol.(eachslice(ref_corners, dims = 3)), n_corners)
 end
@@ -38,13 +37,14 @@ function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect
     return (k = dist[1], Rs = r, ts = t, frow = cammat[1,1], fcol = cammat[2,2], crow = cammat[3,1], ccol = cammat[3,2])
 end
 
-function detect_fit(_files, n_corners, with_distortion, aspect)
-    fi = skipmissing(tcollect(_detect_corners(_file, n_corners) for _file in _files))
-    @assert !isempty(fi) "No checkers were detected in any of the images, perhaps try a different `n_corners` (e.g. not $n_corners)"
-    files = first.(fi)
-    imgpointss = last.(fi)
+function detect_fit(tags, imgs, n_corners, with_distortion, aspect)
+    fi = tcollect(_detect_corners(img, n_corners) for img in imgs)
+    keep = findall(!ismissing, fi)
+    tags = tags[keep]
+    imgpointss = fi[keep]
+    @assert !isempty(tags) "No checkers were detected in any of the images, perhaps try a different `n_corners` (e.g. not $n_corners)"
     objpoints = XYZ.(Tuple.(CartesianIndices((0:(n_corners[1] - 1), 0:(n_corners[2] - 1), 0:0))))
-    sz = size(FileIO.load(first(files)))
+    sz = size(imgs[1])
     k, Rs, ts, frow, fcol, crow, ccol = fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect)
-    return (; files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol)
+    return (; tags, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol)
 end

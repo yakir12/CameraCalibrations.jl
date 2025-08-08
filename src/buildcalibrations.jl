@@ -9,9 +9,9 @@ end
     Calibration(files, n_corners, checker_size, extrinsic_index)
 Build a calibration object. `files` are the image files of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `with_distortion` controls if radial lens distortion is included in the model or not.
 """
-function fit(files, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing)
-
-    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(files, n_corners, with_distortion, aspect)
+function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing) where {T <: AbstractString, S <: Gray}
+    @assert length(tags) == length(imgs) "`tags` and `imgs` should have the same length"
+    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(tags, imgs, n_corners, with_distortion, aspect)
     objpoints = objpoints .* checker_size
     intrinsic, extrinsics, scale = obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
     c = Calibration(intrinsic, extrinsics, scale, k, files)
@@ -21,6 +21,11 @@ function fit(files, n_corners, checker_size; aspect = 1, with_distortion = true,
     ϵ = calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners, inverse_samples)
     plot(plot_folder, c, imgpointss, n_corners, checker_size, sz)
     return (c, ϵ)
+end
+
+function fit(files::Vector{T}, n_corners, checker_size; kwargs...) where T <: AbstractString
+    imgs = [Gray.(FileIO.load(file)) for file in files]
+    fit(files, imgs, n_corners, checker_size; kwargs...)
 end
 
 function _reprojection(c, i, objpoints, imgpoints)
