@@ -6,11 +6,11 @@ function obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
 end
 
 """
-    Calibration(tags::Vector{AbstractString}, imgs::Vector{Matrix{Gray}}, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing)
+    Calibration(tags::Vector{AbstractString}, imgs::Vector{Matrix{Gray}}, n_corners, checker_size; aspect = 1, with_distortion = true, plot_folder::Union{Nothing, String} = nothing)
 
-Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `with_distortion` controls if radial lens distortion is included in the model or not. `inverse_samples` is the number of samples in the inverse error calculation. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
+Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `with_distortion` controls if radial lens distortion is included in the model or not. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
 """
-function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing) where {T <: AbstractString, S <: Gray}
+function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, with_distortion = true, plot_folder::Union{Nothing, String} = nothing) where {T <: AbstractString, S <: Gray}
     @assert length(tags) == length(imgs) "`tags` and `imgs` should have the same length"
     files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(tags, imgs, n_corners, with_distortion, aspect)
     objpoints = objpoints .* checker_size
@@ -19,13 +19,13 @@ function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; 
 
     # cf = improve(c, improve_n, improve_threshold, aspect, with_distortion)
 
-    ϵ = calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners, inverse_samples)
+    ϵ = calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners)
     plot(plot_folder, c, imgpointss, n_corners, checker_size, sz)
     return (c, ϵ)
 end
 
 """
-    Calibration(files::Vector{AbstractString}, n_corners, checker_size; aspect = 1, with_distortion = true, inverse_samples = 100, plot_folder::Union{Nothing, String} = nothing)
+    Calibration(files::Vector{AbstractString}, n_corners, checker_size; aspect = 1, with_distortion = true, plot_folder::Union{Nothing, String} = nothing)
 
 Build a calibration object. `files` are file names to the images of the checkerboard.
 """
@@ -43,7 +43,8 @@ end
     calculate_errors(c)
 Calculate reprojection, projection, distance, and inverse errors for the calibration `c`. `distance` measures the mean error of the distance between all adjacent checkerboard corners from the expected `checker_size`. `inverse` measures the mean error of applying the calibration's transformation and its inverse `inverse_samples` times.
 """
-function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners, inverse_samples)
+function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners)
+    inverse_samples = 100
     reprojection = 0.0
     projection = 0.0
     distance = 0.0
