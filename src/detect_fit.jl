@@ -15,7 +15,7 @@ end
     fit_model
 Wraps OpenCV function to fit a camera model to given object and image points.
 """
-function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect)
+function fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspect)
     cammat = convert(Matrix{Float64}, I(3))
     cammat[1] = 1
     cammat[2, 2] = aspect
@@ -23,7 +23,9 @@ function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect
     nfiles = length(imgpointss)
     r = [Vector{Float64}(undef, 3) for _ in 1:nfiles]
     t = [Vector{Float64}(undef, 3) for _ in 1:nfiles]
-    flags = OpenCV.CALIB_ZERO_TANGENT_DIST + OpenCV.CALIB_FIX_K3 + OpenCV.CALIB_FIX_K2 + (with_distortion ? 0 : OpenCV.CALIB_FIX_K1) + OpenCV.CALIB_FIX_ASPECT_RATIO
+    CALIB_FIX_K = sum([OpenCV.CALIB_FIX_K1, OpenCV.CALIB_FIX_K2, OpenCV.CALIB_FIX_K3][setdiff(1:3, 1:radial_parameters)])
+    # @show Int(CALIB_FIX_K)
+    flags = OpenCV.CALIB_ZERO_TANGENT_DIST + CALIB_FIX_K# + OpenCV.CALIB_FIX_ASPECT_RATIO
     criteria = OpenCV.TermCriteria(OpenCV.TERM_CRITERIA_EPS + OpenCV.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     OpenCV.calibrateCamera(OpenCV.InputArray[Float32.(reshape(stack(objpoints), 3, 1, :)) for _ in 1:nfiles], 
@@ -33,11 +35,10 @@ function fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect
                                                          OpenCV.Mat(reshape(dist, 1, 1, 5)), 
                                                          OpenCV.InputArray[OpenCV.Mat(reshape(ri, 1, 1, 3)) for ri in r], 
                                                          OpenCV.InputArray[OpenCV.Mat(reshape(ti, 1, 1, 3)) for ti in t], flags, CRITERIA)
-
-    return (k = dist[1], Rs = r, ts = t, frow = cammat[1,1], fcol = cammat[2,2], crow = cammat[3,1], ccol = cammat[3,2])
+    return (k = dist[[1,2,5]], Rs = r, ts = t, frow = cammat[1,1], fcol = cammat[2,2], crow = cammat[3,1], ccol = cammat[3,2])
 end
 
-function detect_fit(tags, imgs, n_corners, with_distortion, aspect)
+function detect_fit(tags, imgs, n_corners, radial_parameters, aspect)
     fi = tcollect(_detect_corners(img, n_corners) for img in imgs)
     keep = findall(!ismissing, fi)
     tags = tags[keep]
@@ -45,6 +46,6 @@ function detect_fit(tags, imgs, n_corners, with_distortion, aspect)
     @assert !isempty(tags) "No checkers were detected in any of the images, perhaps try a different `n_corners` (e.g. not $n_corners)"
     objpoints = XYZ.(Tuple.(CartesianIndices((0:(n_corners[1] - 1), 0:(n_corners[2] - 1), 0:0))))
     sz = size(imgs[1])
-    k, Rs, ts, frow, fcol, crow, ccol = fit_model(sz, objpoints, imgpointss, n_corners, with_distortion, aspect)
+    k, Rs, ts, frow, fcol, crow, ccol = fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspect)
     return (; tags, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol)
 end

@@ -18,7 +18,7 @@ struct Calibration
     intrinsic::AM
     extrinsics::Vector{AMext}
     scale::LM3
-    k::Float64
+    k::Vector{Float64}
     files::Vector{String}
     real2image::Vector{ComposedFunction}
     image2real::Vector{ComposedFunction}
@@ -34,26 +34,28 @@ end
 
 """
     lens_distortion
-Lens distortion for one radial coefficient.
+Lens distortion for up to 3 radial coefficients.
 """
 function lens_distortion(v, k)
-    k == 0 && return v
-    r² = LinearAlgebra.norm_sqr(v)
-    radial = 1 + k*r²
-    radial*v
+    kk = zeros(7)
+    kk[1] = 1
+    for (i, ki) in zip(3:2:7, k)
+        kk[i] = ki
+    end
+    p = Polynomial(kk)
+    return v*p(norm(v))
 end
+
 
 """
     inv_lens_distortion
-Analytical inverse lens distortion for one radial coefficient.
+Inverse lens distortion for up to 3 radial coefficients.
 """
 function inv_lens_distortion(v2, k)
-    k == 0 && return v2
-    c = k*LinearAlgebra.norm_sqr(v2)
-    rs = roots(Polynomial([c, 0, 1, -1]))
-    rrs = filter(x -> abs(imag(x)) < 1e-10  , rs)
-    radial = maximum(real, rrs)
-    v2 / radial
+    f(v) = norm(lens_distortion(v, k) - v2)
+    x0 = [v2...]
+    o = optimize(f, x0)
+    SVector{2, Float64}(o.minimizer)
 end
 
 # this is the inverse prespective map

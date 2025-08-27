@@ -15,6 +15,8 @@ using StaticArrays: StaticArrays, SDiagonal, SVector, pop, push
 using Statistics: Statistics, mean
 using StructTypes: StructTypes
 using FileIO: FileIO
+using MAT: matread
+using Optim:optimize
 
 const CRITERIA = OpenCV.TermCriteria(OpenCV.TERM_CRITERIA_EPS + OpenCV.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 

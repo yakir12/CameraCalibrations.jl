@@ -85,8 +85,6 @@ end
         end
 
         @testset "Rectification" begin
-            extrinsic_index = 1
-            extrinsic_file = files[extrinsic_index]
             f = rectification(c, 1)
             i = RowCol(1,2)
             @test f(i) == c(i, 1)[[1,2]]
@@ -106,6 +104,9 @@ end
                 @test org.files == copy.files
             end
         end
+        @testset "MATLAB" begin
+            @test_nowarn CameraCalibrations.load(joinpath(@__DIR__(), "example", "cameraParams.mat"))
+        end
     end
 
     @testset "Full calibration with a different $aspect ratio" for aspect in (0.75, 1.25)
@@ -124,8 +125,6 @@ end
             end
 
             @testset "Rectification" begin
-                extrinsic_index = 1
-                extrinsic_file = files[extrinsic_index]
                 f = rectification(c, 1)
                 i = RowCol(1,2)
                 @test f(i) == c(i, 1)[[1,2]]
