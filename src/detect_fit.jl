@@ -25,7 +25,7 @@ function fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspe
     t = [Vector{Float64}(undef, 3) for _ in 1:nfiles]
     CALIB_FIX_K = sum([OpenCV.CALIB_FIX_K1, OpenCV.CALIB_FIX_K2, OpenCV.CALIB_FIX_K3][setdiff(1:3, 1:radial_parameters)])
     # @show Int(CALIB_FIX_K)
-    flags = OpenCV.CALIB_ZERO_TANGENT_DIST + CALIB_FIX_K# + OpenCV.CALIB_FIX_ASPECT_RATIO
+    flags = OpenCV.CALIB_ZERO_TANGENT_DIST + CALIB_FIX_K + OpenCV.CALIB_FIX_ASPECT_RATIO
     criteria = OpenCV.TermCriteria(OpenCV.TERM_CRITERIA_EPS + OpenCV.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     OpenCV.calibrateCamera(OpenCV.InputArray[Float32.(reshape(stack(objpoints), 3, 1, :)) for _ in 1:nfiles], 
