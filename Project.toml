@@ -1,7 +1,7 @@
 name = "CameraCalibrations"
 uuid = "70c3cbac-2c23-4b2d-966c-5a25c0a540fb"
 authors = ["Yakir <12.yakir@gmail.com> and contributors"]
-version = "0.9.2"
+version = "0.9.3"
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
