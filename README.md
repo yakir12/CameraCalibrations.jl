@@ -21,12 +21,24 @@ using CameraCalibrations
 c, ϵ = fit(files, n_corners, checker_size)
 ```
 
-Then we can use that object to calibrate pixel coordinates and/or images, given the extrinsic image we want to refer to:
+The `fit` function returns a `Calibration` object, `c`, and an error term `ϵ`. The `Calibration` object can then be used to convert between pixel coordinates and real-world coordinates.
+
+### Coordinate transformations
+
+To convert a pixel coordinate to a real-world coordinate, you can call the `Calibration` object with a `RowCol` object and the index of the image to use for the extrinsic parameters:
+
 ```julia
 i1 = RowCol(1.2, 3.4) # a cartesian index in image-pixel coordinates
 xyz = c(i1, 1) # convert to real-world coordinates of the first image
 i2 = c(xyz, 1) # convert back to pixel coordinates
 i2 ≈ i1 # true
+```
+
+To convert a real-world coordinate to a pixel coordinate, you can call the `Calibration` object with an `XYZ` object and the index of the image to use for the extrinsic parameters:
+
+```julia
+xyz = XYZ(1.2, 3.4, 5.6)
+i1 = c(xyz, 1) # convert to pixel coordinates
 ```
 
 The error term, `ϵ`, includes the reprojection, projection, distance, and inverse errors for the calibration. `distance` measures the mean error of the distance between all adjacent checkerboard corners from the expected `checker_size`. `inverse` measures the mean error of applying the calibration's transformation and its inverse 100 times.
@@ -43,9 +55,29 @@ fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size) where {T 
 - `with_distortion`: Include lens distortion in the model. This can be useful to exclude if the resulting camera model results in "donut artifacts" (where the projected coordinates wrap back on themselves at the periphery of the image). Defaults to `true`.
 - `plot_folder`: Save the rectified calibration images with a red cross on each detected checkerboard corner and a blue one for the reprojected one. This is useful for assessing the quality of the calibration: the checkerboards should look square and the centers of the red and blue crosses should overlap.
 
+## Exported types
+- `RowCol`: a type that represents a cartesian index in image-pixel coordinates.
+- `XYZ`: a type that represents a real-world coordinate.
+
+## Saving and Loading Calibrations
+
+You can save and load `Calibration` objects to and from a file. This package supports both JSON and MATLAB (`.mat`) file formats.
+
+To save a `Calibration` object, use the `save` function:
+```julia
+save("calibration.json", c)
+```
+
+To load a `Calibration` object, use the `load` function:
+```julia
+c = load("calibration.json")
+```
+
+The `load` function will automatically detect the file format.
+
 ## Features
 - [x] thread safe
-- [x] saving and loading (JSON) calibration files
+- [x] saving and loading (JSON and MATLAB) calibration files
 - [x] corner detection is done with opencv
 - [x] model fitting is done with opencv
 - [x] opencv is python-free, via `OpenCV.jl`
