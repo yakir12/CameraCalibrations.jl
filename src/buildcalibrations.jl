@@ -6,9 +6,9 @@ function obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
 end
 
 """
-    Calibration(tags::Vector{AbstractString}, imgs::Vector{Matrix{Gray}}, n_corners, checker_size; aspect = 1, with_distortion = true, plot_folder::Union{Nothing, String} = nothing)
+    Calibration(tags::Vector{AbstractString}, imgs::Vector{Matrix{Gray}}, n_corners, checker_size; aspect = 1, radial_parameters = 1, plot_folder::Union{Nothing, String} = nothing)
 
-Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `with_distortion` controls if radial lens distortion is included in the model or not. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
+Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `radial_parameters` controls how many radial lens distortion parameters are included in the model. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
 """
 function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, radial_parameters::Int = 1, plot_folder::Union{Nothing, String} = nothing) where {T <: AbstractString, S <: Gray}
     @assert length(tags) == length(imgs) "`tags` and `imgs` should have the same length"
