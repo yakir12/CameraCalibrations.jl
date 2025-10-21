@@ -4,7 +4,7 @@ using CoordinateTransformations: CoordinateTransformations, AffineMap, LinearMap
 using ImageBase: ImageBase, @colorant_str, Gray, RGB, channelview, norm, rawview, ⋅
 using ImageDraw: ImageDraw, Cross, Point, draw!
 using ImageTransformations: ImageTransformations, warp
-using JSON3: JSON3
+using JSON: JSON
 using LinearAlgebra: LinearAlgebra, /, Diagonal, I, convert
 using OhMyThreads: OhMyThreads, tcollect
 using OpenCV: OpenCV

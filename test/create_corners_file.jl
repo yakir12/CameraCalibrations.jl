@@ -1,4 +1,4 @@
-using ImageDraw
+using ImageDraw, JSON
 dir = joinpath(@__DIR__(), "example")
 files = filter(file -> last(splitext(file)) == ".png", readdir(dir, join = true))
 n = length(files)
@@ -17,6 +17,6 @@ for file in files
     end
 end
 open("example/corners.json", "w") do io
-    print(io, JSON3.write(d))
+    print(io, JSON.json(d))
 end
 

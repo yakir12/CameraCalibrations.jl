@@ -30,12 +30,12 @@ else
 end
 
 function loadJSON(file)
-    cio = JSON3.read(read(file, String), CalibrationIO)
+    cio = JSON.parse(read(file, String), CalibrationIO)
     Calibration(cio)
 end
 
 save(file, cio::CalibrationIO) = open(file, "w") do io
-    JSON3.write(io, cio)
+    JSON.json(io, cio)
 end
 
 save(file, c::Calibration) = save(file, CalibrationIO(c))
