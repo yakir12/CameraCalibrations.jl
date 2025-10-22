@@ -37,7 +37,7 @@ end
 @testset "CameraCalibrations.jl" begin
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(CameraCalibrations; 
-                      piracies = (; treat_as_own = [Diagonal]),
+                      # piracies = (; treat_as_own = [Diagonal]),
                       stale_deps = (; ignore = [:ImageIO]))
     end
 
@@ -65,7 +65,7 @@ end
         end
 
         @testset "In real images" begin
-            target = JSON.parse(joinpath(@__DIR__(), "example", "corners.json"))
+            target = JSON.parsefile(joinpath(@__DIR__(), "example", "corners.json"))
             for file in CALIB.files
                 img = FileIO.load(file)
                 res = CameraCalibrations._detect_corners(img, CALIB.n_corners)

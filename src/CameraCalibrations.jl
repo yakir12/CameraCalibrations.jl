@@ -5,15 +5,14 @@ using ImageBase: ImageBase, @colorant_str, Gray, RGB, channelview, norm, rawview
 using ImageDraw: ImageDraw, Cross, Point, draw!
 using ImageTransformations: ImageTransformations, warp
 using JSON: JSON
-using LinearAlgebra: LinearAlgebra, /, Diagonal, I, convert
+using LinearAlgebra: LinearAlgebra, /, Diagonal, I, convert, diag
 using OhMyThreads: OhMyThreads, tcollect
 using OpenCV: OpenCV
-using Polynomials: Polynomials, Polynomial, roots
+using Polynomials: Polynomials, Polynomial
 using Random: Random, AbstractRNG
 using Rotations: Rotations, RotationVec
 using StaticArrays: StaticArrays, SDiagonal, SVector, pop, push
 using Statistics: Statistics, mean
-using StructTypes: StructTypes
 using FileIO: FileIO
 using MAT: matread
 using Optim:optimize
