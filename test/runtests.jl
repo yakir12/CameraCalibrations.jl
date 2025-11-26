@@ -107,6 +107,15 @@ end
         @testset "MATLAB" begin
             @test_nowarn CameraCalibrations.load(joinpath(@__DIR__(), "example", "cameraParams.mat"))
         end
+
+        @testset "only scale" begin
+            for factor in (0.5, 1, 2)
+                c = only_scale(factor)
+                calib = rectification(c, 1)
+                rc = RowCol(1, 2)
+                @test all(calib(rc) .≈ rc/factor)
+            end
+        end
     end
 
     @testset "Full calibration with a different $aspect ratio" for aspect in (0.75, 1.25)
