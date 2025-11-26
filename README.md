@@ -23,6 +23,13 @@ c, ϵ = fit(files, n_corners, checker_size)
 
 The `fit` function returns a `Calibration` object, `c`, and an error term `ϵ`. The `Calibration` object can then be used to convert between pixel coordinates and real-world coordinates.
 
+#### Only scale calibrations
+You can build a calibration that only scales coordinates with `only_scale`. For example, a calibration where 1 cm is equal to 100 pixels can be constructed with:
+
+```julia
+c = only_scale(100)
+```
+
 ### Coordinate transformations
 
 To convert a pixel coordinate to a real-world coordinate, you can call the `Calibration` object with a `RowCol` object and the index of the image to use for the extrinsic parameters:

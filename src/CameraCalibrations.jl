@@ -16,10 +16,11 @@ using Statistics: Statistics, mean
 using FileIO: FileIO
 using MAT: matread
 using Optim:optimize
+import Base: one
 
 const CRITERIA = OpenCV.TermCriteria(OpenCV.TERM_CRITERIA_EPS + OpenCV.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-export fit, Calibration, CalibrationIO, rectification, RowCol, XYZ
+export fit, Calibration, CalibrationIO, rectification, RowCol, XYZ, only_scale
 
 include("meta.jl")
 include("io.jl")

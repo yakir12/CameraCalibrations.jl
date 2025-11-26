@@ -75,6 +75,15 @@ function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_c
     return (; n = n_files, reprojection, projection, distance, inverse)
 end
 
+function only_scale(scale_factor)
+    intrinsic = AffineMap{Matrix{Float64}, Vector{Float64}}(collect(I(2)), zeros(2))
+    extrinsics = [AffineMap{Matrix{Float64}, Vector{Float64}}(collect(I(3)), [0, 0, 1])]
+    scale = LinearMap{Matrix{Float64}}(scale_factor .* collect(I(3)))
+    k = zeros(3)
+    files = ["filename"]
+    Calibration(CalibrationIO(intrinsic, extrinsics, scale, k, files))
+end
+
 # function filter_files(c; improve_n = nothing, improve_threshold = nothing, 
 # """
 #     improve
