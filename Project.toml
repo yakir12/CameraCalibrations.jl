@@ -1,7 +1,7 @@
 name = "CameraCalibrations"
 uuid = "70c3cbac-2c23-4b2d-966c-5a25c0a540fb"
-authors = ["Yakir <12.yakir@gmail.com> and contributors"]
 version = "0.9.5"
+authors = ["Yakir <12.yakir@gmail.com> and contributors"]
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
@@ -43,9 +43,8 @@ Random = "1.10"
 Rotations = "1"
 StaticArrays = "1"
 Statistics = "1"
-# StructUtils = "2.3"
 Test = "1"
-julia = "1.10"
+julia = "~1.0, ~1.1, ~1.2, ~1.3, ~1.4, ~1.5, ~1.6, ~1.7, ~1.8, ~1.9, ~1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
