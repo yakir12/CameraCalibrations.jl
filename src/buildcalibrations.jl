@@ -25,7 +25,7 @@ function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; 
 end
 
 """
-    Calibration(files::Vector{AbstractString}, n_corners, checker_size; aspect = 1, with_distortion = true, plot_folder::Union{Nothing, String} = nothing)
+    fit(files::Vector{AbstractString}, n_corners, checker_size; aspect = 1, radial_parameters = 1, plot_folder::Union{Nothing, String} = nothing)
 
 Build a calibration object. `files` are file names to the images of the checkerboard.
 """

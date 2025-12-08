@@ -23,7 +23,7 @@ end
 
 function draw_crosses!(img, imgpoint, n1, color)
     ij = vec([round.(Int, rc) for rc in imgpoint])
-    radius = round(Int, norm(ij[1] - ij[n1])/n1/5) # radius relative to checkerboard's aparent size
+    radius = round(Int, norm(ij[1] - ij[n1])/n1/5) # radius relative to checkerboard's apparent size
     draw!(img, Cross.(Point.(CartesianIndex.(Tuple.(ij))), radius), color)
 end
 
@@ -31,7 +31,7 @@ plot(::Nothing, c::Calibration, imgpointss, n_corners, checker_size, sz) = nothi
 
 """
     plot
-Save to locally created directory `debug` all the calibration's images after rectification. Blue crosses indicate detetcted corners, and red crosses indicate their rectificated real-world locations. Ideally, both crosses' centers are right on top of each other.
+Save to locally created directory `debug` all the calibration's images after rectification. Blue crosses indicate detected corners, and red crosses indicate their rectified real-world locations. Ideally, both crosses' centers are right on top of each other.
 """
 function plot(plot_folder, c::Calibration, imgpointss, n_corners, checker_size, sz)
     dir = mkpath(plot_folder)
