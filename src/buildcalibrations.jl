@@ -5,14 +5,37 @@ function obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
     return intrinsic, extrinsics, scale
 end
 
+# Identify the chosen extrinsic image by its tag (file name), before detection drops any image. Accepts either an
+# integer position into the original `tags` or one of the tags directly. Returns the tag, or `nothing`.
+_extrinsic_tag(::Nothing, tags) = nothing
+function _extrinsic_tag(extrinsic_index::Integer, tags)
+    1 ≤ extrinsic_index ≤ length(tags) || error("`extrinsic_index` ($extrinsic_index) must be between 1 and the number of images ($(length(tags)))")
+    return tags[extrinsic_index]
+end
+function _extrinsic_tag(extrinsic_index::AbstractString, tags)
+    extrinsic_index in tags || error("`extrinsic_index` (\"$extrinsic_index\") is not one of the image tags/file names")
+    return extrinsic_index
+end
+
+# After detection (which drops images whose corners weren't found), map the chosen extrinsic tag to its position in
+# the kept `files`. Errors if corners were not detected in that image, since it cannot serve as the reference.
+_resolve_extrinsic_index(::Nothing, files) = nothing
+function _resolve_extrinsic_index(extrinsic_tag, files)
+    i = findfirst(==(extrinsic_tag), files)
+    isnothing(i) && error("corners were not detected in the chosen extrinsic image (\"$extrinsic_tag\"), so it cannot be used as the extrinsic reference")
+    return i
+end
+
 """
     Calibration(tags::Vector{AbstractString}, imgs::Vector{Matrix{Gray}}, n_corners, checker_size; aspect = 1, radial_parameters = 1, plot_folder::Union{Nothing, String} = nothing)
 
-Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `radial_parameters` controls how many radial lens distortion parameters are included in the model. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
+Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `radial_parameters` controls how many radial lens distortion parameters are included in the model. `extrinsic_index` selects the reference image either by its position in `tags` (an `Int`) or by its tag/file name (a `String`); it is resilient to images dropped during corner detection. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
 """
 function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, radial_parameters::Int = 1, plot_folder::Union{Nothing, String} = nothing, center = nothing, north = nothing, extrinsic_index = nothing) where {T <: AbstractString, S <: Gray}
     @assert length(tags) == length(imgs) "`tags` and `imgs` should have the same length"
+    extrinsic_tag = _extrinsic_tag(extrinsic_index, tags)
     files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(tags, imgs, n_corners, radial_parameters, aspect)
+    extrinsic_index = _resolve_extrinsic_index(extrinsic_tag, files)
     objpoints = objpoints .* checker_size
     intrinsic, extrinsics, scale = obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
     c = Calibration(intrinsic, extrinsics, scale, k, files; center, north, extrinsic_index)

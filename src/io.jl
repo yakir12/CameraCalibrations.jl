@@ -39,7 +39,7 @@ function Calibration(cio::CalibrationIO)
     image2real = .∘(Ref(inv_scale), inv_extrinsics, inv_perspective_maps, inv_distort, Ref(inv_intrinsic))
     center = isnothing(cio.center) ? nothing : RowCol(cio.center)
     north = isnothing(cio.north) ? nothing : RowCol(cio.north)
-    _validate_reference(cio.extrinsic_index, center, north)
+    _validate_reference(cio.extrinsic_index, center, north, length(extrinsics))
     return Calibration(intrinsic, extrinsics, scale, cio.k, cio.files, real2image, image2real, center, north, cio.extrinsic_index)
 end
 

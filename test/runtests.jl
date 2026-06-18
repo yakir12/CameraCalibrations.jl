@@ -161,6 +161,31 @@ end
             @test copy.extrinsic_index == c.extrinsic_index
             @test rectification(copy)(copy.center) ≈ rectification(c)(c.center) atol = 1e-6
         end
+
+        @testset "Extrinsic index validation" begin
+            # out-of-range index errors early (at construction), not later at use
+            @test_throws Exception only_scale(1.0; extrinsic_index = 2, center = center)
+            @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = 0)
+            @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = length(CALIB.files) + 1)
+
+            # select the extrinsic image by its file name (a String)
+            cstr, _ = fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = CALIB.files[2])
+            @test cstr.files[cstr.extrinsic_index] == CALIB.files[2]
+            @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = "not-a-file.png")
+
+            # a dropped image (failed corner detection) must not shift which image extrinsic_index refers to
+            imgs = [Gray.(FileIO.load(f)) for f in CALIB.files]
+            blank = fill(zero(eltype(imgs[1])), size(imgs[1]))   # detection fails here → image dropped
+            tags2 = ["blank", basename.(CALIB.files)...]
+            imgs2 = [blank, imgs...]
+            target = basename(CALIB.files[2])                    # sits after the blank in the original list
+            pos = findfirst(==(target), tags2)
+            cdrop, _ = fit(tags2, imgs2, CALIB.n_corners, CALIB.checker_size; extrinsic_index = pos)
+            @test !("blank" in cdrop.files)                      # the blank really was dropped
+            @test cdrop.files[cdrop.extrinsic_index] == target   # index still points to the intended image
+            # choosing the undetectable image is an error (the calibration is unusable as a reference)
+            @test_throws Exception fit(tags2, imgs2, CALIB.n_corners, CALIB.checker_size; extrinsic_index = "blank")
+        end
     end
 
     @testset "IO" begin

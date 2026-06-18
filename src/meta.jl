@@ -28,16 +28,20 @@ struct Calibration
 end
 
 """
-    _validate_reference(extrinsic_index, center, north)
+    _validate_reference(extrinsic_index, center, north, n_extrinsics)
 Check that the optional reference-frame metadata is a valid combination. The rule is north ⇒ center ⇒
 `extrinsic_index`: a `north` direction requires both a `center` and an `extrinsic_index`, and a `center` requires an
-`extrinsic_index`. An `extrinsic_index` alone (or no metadata at all) is fine.
+`extrinsic_index`. An `extrinsic_index` alone (or no metadata at all) is fine. When given, `extrinsic_index` must be
+a valid index into the `n_extrinsics` extrinsic images.
 """
-function _validate_reference(extrinsic_index, center, north)
+function _validate_reference(extrinsic_index, center, north, n_extrinsics)
     if !isnothing(north) && (isnothing(center) || isnothing(extrinsic_index))
         error("`north` requires both `center` and `extrinsic_index`")
     elseif !isnothing(center) && isnothing(extrinsic_index)
         error("`center` requires `extrinsic_index`")
+    end
+    if !isnothing(extrinsic_index) && !(1 ≤ extrinsic_index ≤ n_extrinsics)
+        error("`extrinsic_index` ($extrinsic_index) must be between 1 and the number of extrinsic images ($n_extrinsics)")
     end
     return nothing
 end
@@ -45,7 +49,7 @@ end
 function Calibration(intrinsic, extrinsics, scale, k, files; center = nothing, north = nothing, extrinsic_index = nothing)
     center = isnothing(center) ? nothing : RowCol(center)
     north = isnothing(north) ? nothing : RowCol(north)
-    _validate_reference(extrinsic_index, center, north)
+    _validate_reference(extrinsic_index, center, north, length(extrinsics))
     distort(rc) = lens_distortion(rc, k)
     real2image = .∘(Ref(intrinsic), distort, Ref(PerspectiveMap()), extrinsics, Ref(scale))
     inv_scale, inv_extrinsics, inv_perspective_maps, inv_distort, inv_intrinsic = img2obj(intrinsic, extrinsics, scale, k)
