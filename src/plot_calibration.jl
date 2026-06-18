@@ -27,21 +27,25 @@ function draw_crosses!(img, imgpoint, n1, color)
     draw!(img, Cross.(Point.(CartesianIndex.(Tuple.(ij))), radius), color)
 end
 
-plot(::Nothing, c::Calibration, imgpointss, n_corners, checker_size, sz) = nothing
+plot(::Nothing, c::Calibration, imgs, imgpointss, n_corners, checker_size, sz) = nothing
+
+# Output file name for a (possibly in-memory) tag: keep the basename, but ensure an image extension so FileIO can
+# infer the format even when the tag isn't a real file path (e.g. "frame1").
+_plot_filename(file) = isempty(last(splitext(basename(file)))) ? basename(file) * ".png" : basename(file)
 
 """
     plot
 Save to locally created directory `debug` all the calibration's images after rectification. Blue crosses indicate detected corners, and red crosses indicate their rectified real-world locations. Ideally, both crosses' centers are right on top of each other.
 """
-function plot(plot_folder, c::Calibration, imgpointss, n_corners, checker_size, sz)
+function plot(plot_folder, c::Calibration, imgs, imgpointss, n_corners, checker_size, sz)
     dir = mkpath(plot_folder)
-    for (file, imgpoints) in zip(c.files, imgpointss)
-        img = RGB.(FileIO.load(file))
+    for (i, (file, img0, imgpoints)) in enumerate(zip(c.files, imgs, imgpointss))
+        img = RGB.(img0)
         draw_crosses!(img, imgpoints, n_corners[1], colorant"red")
-        tform, itform, axs = image_transformations(c, findfirst(==(file), c.files), imgpointss, checker_size, n_corners, sz)
+        tform, itform, axs = image_transformations(c, i, imgpointss, checker_size, n_corners, sz)
         imgw = warp(img, tform, axs)
         draw_crosses!(imgw, itform.(imgpoints), n_corners[1], colorant"blue")
-        FileIO.save(joinpath(dir, basename(file)), parent(imgw))
+        FileIO.save(joinpath(dir, _plot_filename(file)), parent(imgw))
     end
     return nothing
 end

@@ -49,5 +49,5 @@ function detect_fit(tags, imgs, n_corners, radial_parameters, aspect, extrinsic_
     objpoints = XYZ.(Tuple.(CartesianIndices((0:(n_corners[1] - 1), 0:(n_corners[2] - 1), 0:0))))
     sz = size(imgs[keep[1]])   # size of a kept image; imgs[1] itself may have been dropped (failed detection)
     k, Rs, ts, frow, fcol, crow, ccol = fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspect)
-    return (; tags, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol, extrinsic_index)
+    return (; tags, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol, extrinsic_index, keep)
 end

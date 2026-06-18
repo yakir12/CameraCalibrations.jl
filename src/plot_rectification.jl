@@ -5,7 +5,7 @@ into the reference frame defined by `c.center`/`c.north`. Use it to confirm the 
 and `north` points up. The image is rendered `+y`-up (north up, `+x` to the right) so it reads like the original
 photo, without mirroring. Requires `c.center` and `c.extrinsic_index` to be set.
 """
-function plot_rectification(plot_folder, c::Calibration, imgpointss, n_corners, checker_size)
+function plot_rectification(plot_folder, c::Calibration, imgs, imgpointss, n_corners, checker_size)
     ei = c.extrinsic_index
     ratio = get_ratio(imgpointss[ei], checker_size)
     # display map: reference-frame xy → output pixel (row, col), `+y`-up and scaled to ~`ratio` pixels per checker.
@@ -16,7 +16,7 @@ function plot_rectification(plot_folder, c::Calibration, imgpointss, n_corners, 
     M = D ∘ A                                   # world xy → output pixel
     P = rectification(c)                        # source pixel → reference-frame xy
 
-    img = RGB.(FileIO.load(c.files[ei]))
+    img = RGB.(imgs[ei])                        # the kept extrinsic image (works for in-memory `fit` too)
     nrow, ncol = size(img)
     # output extents: bounding box of the four source-image corners mapped into the output frame.
     corners = (RowCol(1, 1), RowCol(1, ncol), RowCol(nrow, 1), RowCol(nrow, ncol))

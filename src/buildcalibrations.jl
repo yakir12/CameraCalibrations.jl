@@ -38,7 +38,8 @@ Build a calibration object. `tags` are references (just names) to each of the im
 function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, radial_parameters::Int = 1, plot_folder::Union{Nothing, String} = nothing, center = nothing, north = nothing, extrinsic_index = nothing) where {T <: AbstractString, S <: Gray}
     length(tags) == length(imgs) || throw(ArgumentError("`tags` and `imgs` should have the same length"))
     extrinsic_tag = _extrinsic_tag(extrinsic_index, tags)
-    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol, extrinsic_index = detect_fit(tags, imgs, n_corners, radial_parameters, aspect, extrinsic_tag)
+    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol, extrinsic_index, keep = detect_fit(tags, imgs, n_corners, radial_parameters, aspect, extrinsic_tag)
+    kept_imgs = imgs[keep]   # the images whose corners were detected, aligned with `files`/`imgpointss`
     objpoints = objpoints .* checker_size
     intrinsic, extrinsics, scale = obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
     c = Calibration(intrinsic, extrinsics, scale, k, files; center, north, extrinsic_index)
@@ -46,9 +47,9 @@ function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; 
     # cf = improve(c, improve_n, improve_threshold, aspect, with_distortion)
 
     ϵ = calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners)
-    plot(plot_folder, c, imgpointss, n_corners, checker_size, sz)
+    plot(plot_folder, c, kept_imgs, imgpointss, n_corners, checker_size, sz)
     if plot_folder !== nothing && c.center !== nothing && c.extrinsic_index !== nothing
-        plot_rectification(plot_folder, c, imgpointss, n_corners, checker_size)
+        plot_rectification(plot_folder, c, kept_imgs, imgpointss, n_corners, checker_size)
     end
     return (c, ϵ)
 end

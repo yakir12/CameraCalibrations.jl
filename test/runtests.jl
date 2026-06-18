@@ -226,6 +226,25 @@ end
                 @test org.extrinsic_index == copy.extrinsic_index
             end
         end
+        @testset "no metadata round-trips" begin
+            c0 = only_scale(1.0)   # center / north / extrinsic_index all nothing
+            copy0 = mktempdir() do path
+                file = joinpath(path, "c.json")
+                CameraCalibrations.save(file, c0)
+                CameraCalibrations.load(file)
+            end
+            @test isnothing(copy0.center)
+            @test isnothing(copy0.north)
+            @test isnothing(copy0.extrinsic_index)
+        end
+
+        @testset "invalid CalibrationIO cannot be built" begin
+            # validation happens up front, so an unsaveable/unloadable combination errors immediately
+            mk(; kw...) = CameraCalibrations.CalibrationIO(rand(2, 2), [rand(3, 3)], rand(3, 3), rand(3), ["a"]; kw...)
+            @test_throws Exception mk(center = [1.0, 2.0])                      # center without index
+            @test_throws Exception mk(extrinsic_index = 1, center = [1.0, 2.0], north = [1.5, 2.0])  # north < 10 px
+        end
+
         @testset "MATLAB" begin
             matfile = joinpath(@__DIR__(), "example", "cameraParams.mat")
             @test_nowarn CameraCalibrations.loadMAT(matfile)
@@ -297,6 +316,20 @@ end
                 north = RowCol(sz[1] / 4, sz[2] / 2)
                 fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; CALIB.aspect, plot_folder, extrinsic_index = 1, center, north)
                 @test "rectified_extrinsic.png" in readdir(plot_folder)
+            end
+        end
+
+        @testset "In-memory images plot from memory (no reload from disk)" begin
+            # tags are not file paths, so plotting must use the in-memory images, not FileIO.load(tag)
+            imgs = [Gray.(FileIO.load(f)) for f in CALIB.files]
+            tags = ["frame$i" for i in eachindex(CALIB.files)]   # bare tags, no extension
+            mktempdir() do plot_folder
+                sz = size(imgs[1])
+                center = RowCol(sz[1] / 2, sz[2] / 2)
+                north = RowCol(sz[1] / 4, sz[2] / 2)
+                fit(tags, imgs, CALIB.n_corners, CALIB.checker_size; plot_folder, extrinsic_index = 1, center, north)
+                @test "rectified_extrinsic.png" in readdir(plot_folder)
+                @test "frame1.png" in readdir(plot_folder)        # calibration plot, extension appended
             end
         end
     end

@@ -10,9 +10,12 @@ struct CalibrationIO
 end
 
 # Convenience constructor so existing positional calls keep working and gain the reference-frame kwargs. Coexists
-# with the auto-generated 8-argument constructor used by JSON's typed parsing.
-CalibrationIO(intrinsic, extrinsics, scale, k, files; center = nothing, north = nothing, extrinsic_index = nothing) =
+# with the auto-generated 8-argument constructor used by JSON's typed parsing. Validates the reference-frame metadata
+# up front so an invalid combination can't be built (and then saved to a file that wouldn't load back).
+function CalibrationIO(intrinsic, extrinsics, scale, k, files; center = nothing, north = nothing, extrinsic_index = nothing)
+    _validate_reference(extrinsic_index, center, north, length(extrinsics))
     CalibrationIO(intrinsic, extrinsics, scale, k, files, center, north, extrinsic_index)
+end
 
 function convert_intrinsic_or_extrinsic(x::AffineMap{Matrix{T}, Vector{T}}) where {T}
     if length(x.translation) == 2
