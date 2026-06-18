@@ -148,6 +148,12 @@ end
             @test rectification(cidx)(i) == rectification(cidx, ei)(i)
             # existing 2-arg behaviour intact
             @test rectification(c, ei)(i) == c(i, ei)[[1, 2]]
+            # out-of-range index on the direct-index entry points errors clearly (not a bare BoundsError)
+            bad = length(c.extrinsics) + 1
+            @test_throws ArgumentError rectification(c, bad)
+            @test_throws ArgumentError c(i, bad)
+            @test_throws ArgumentError c(CameraCalibrations.XYZ(0, 0, 0), bad)
+            @test_throws ArgumentError rectification(c, 0)
         end
 
         @testset "JSON round-trip preserves metadata" begin

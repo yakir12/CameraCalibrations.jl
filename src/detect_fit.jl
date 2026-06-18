@@ -17,7 +17,6 @@ Wraps OpenCV function to fit a camera model to given object and image points.
 """
 function fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspect)
     cammat = convert(Matrix{Float64}, I(3))
-    cammat[1] = 1
     cammat[2, 2] = aspect
     dist = Vector{Float64}(undef, 5)
     nfiles = length(imgpointss)
@@ -26,7 +25,6 @@ function fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspe
     CALIB_FIX_K = sum([OpenCV.CALIB_FIX_K1, OpenCV.CALIB_FIX_K2, OpenCV.CALIB_FIX_K3][setdiff(1:3, 1:radial_parameters)])
     # @show Int(CALIB_FIX_K)
     flags = OpenCV.CALIB_ZERO_TANGENT_DIST + CALIB_FIX_K + OpenCV.CALIB_FIX_ASPECT_RATIO
-    criteria = OpenCV.TermCriteria(OpenCV.TERM_CRITERIA_EPS + OpenCV.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     OpenCV.calibrateCamera(OpenCV.InputArray[Float32.(reshape(stack(objpoints), 3, 1, :)) for _ in 1:nfiles], 
                                                          OpenCV.InputArray[Float32.(reshape(stack(imgpoints), 2, 1, :)) for imgpoints in imgpointss], 

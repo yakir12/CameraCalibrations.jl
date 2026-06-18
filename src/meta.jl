@@ -110,23 +110,38 @@ function img2obj(intrinsic, extrinsics, scale, k)
     return inv(scale), inv_extrinsics, inv_perspective_maps, inv_distort, inv(intrinsic)
 end
 
+# Bounds-check a directly-supplied extrinsic index, with a clear message instead of a bare BoundsError.
+function _check_extrinsic_index(c::Calibration, extrinsic_index)
+    1 ≤ extrinsic_index ≤ length(c.extrinsics) || throw(ArgumentError("`extrinsic_index` ($extrinsic_index) must be between 1 and the number of extrinsic images ($(length(c.extrinsics)))"))
+    return nothing
+end
+
 """
     c(i::RowCol, extrinsic)
 Convert the row column StaticArray `i` to its real-world equivalent, `XYZ`, for the extrinsic parameters from the `extrinsic` image (given as an index or file name).
 """
-(c::Calibration)(i::RowCol, extrinsic_index::Int) = c.image2real[extrinsic_index](i)
+function (c::Calibration)(i::RowCol, extrinsic_index::Int)
+    _check_extrinsic_index(c, extrinsic_index)
+    c.image2real[extrinsic_index](i)
+end
 
 """
     c(xyz::XYZ, extrinsic)
 Convert the x, y, z StaticArray `xyz` to its pixel-coordinate equivalent, `RowCol` for the extrinsic parameters from the `extrinsic` image (given as an index or file name).
 """
-(c::Calibration)(xyz::XYZ, extrinsic_index::Int) = c.real2image[extrinsic_index](xyz)
+function (c::Calibration)(xyz::XYZ, extrinsic_index::Int)
+    _check_extrinsic_index(c, extrinsic_index)
+    c.real2image[extrinsic_index](xyz)
+end
 
 """
     rectification(c, extrinsic_index)
 Return a function that accepts an instance of `::RowCol` and converts it to its real-world equivalent for the extrinsic parameters from the `extrinsic_index` image, without its third dimension (which would be ≈ 0): an `xy` coordinate.
 """
-rectification(c::Calibration, extrinsic_index) = pop ∘ c.image2real[extrinsic_index]
+function rectification(c::Calibration, extrinsic_index)
+    _check_extrinsic_index(c, extrinsic_index)
+    pop ∘ c.image2real[extrinsic_index]
+end
 
 """
     reference_affine(c)
