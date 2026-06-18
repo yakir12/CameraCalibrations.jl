@@ -10,17 +10,20 @@ end
 
 Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `radial_parameters` controls how many radial lens distortion parameters are included in the model. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
 """
-function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, radial_parameters::Int = 1, plot_folder::Union{Nothing, String} = nothing) where {T <: AbstractString, S <: Gray}
+function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, radial_parameters::Int = 1, plot_folder::Union{Nothing, String} = nothing, center = nothing, north = nothing, extrinsic_index = nothing) where {T <: AbstractString, S <: Gray}
     @assert length(tags) == length(imgs) "`tags` and `imgs` should have the same length"
     files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(tags, imgs, n_corners, radial_parameters, aspect)
     objpoints = objpoints .* checker_size
     intrinsic, extrinsics, scale = obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
-    c = Calibration(intrinsic, extrinsics, scale, k, files)
+    c = Calibration(intrinsic, extrinsics, scale, k, files; center, north, extrinsic_index)
 
     # cf = improve(c, improve_n, improve_threshold, aspect, with_distortion)
 
     ϵ = calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_corners)
     plot(plot_folder, c, imgpointss, n_corners, checker_size, sz)
+    if plot_folder !== nothing && c.center !== nothing && c.extrinsic_index !== nothing
+        plot_rectification(plot_folder, c, imgpointss, n_corners, checker_size)
+    end
     return (c, ϵ)
 end
 
@@ -75,13 +78,13 @@ function calculate_errors(c, imgpointss, objpoints, checker_size, sz, files, n_c
     return (; n = n_files, reprojection, projection, distance, inverse)
 end
 
-function only_scale(scale_factor)
+function only_scale(scale_factor; center = nothing, north = nothing, extrinsic_index = nothing)
     intrinsic = AffineMap{Matrix{Float64}, Vector{Float64}}(collect(I(2)), zeros(2))
     extrinsics = [AffineMap{Matrix{Float64}, Vector{Float64}}(collect(I(3)), [0, 0, 1])]
     scale = LinearMap{Matrix{Float64}}(scale_factor .* collect(I(3)))
     k = zeros(3)
     files = ["filename"]
-    Calibration(CalibrationIO(intrinsic, extrinsics, scale, k, files))
+    Calibration(CalibrationIO(intrinsic, extrinsics, scale, k, files; center, north, extrinsic_index))
 end
 
 # function filter_files(c; improve_n = nothing, improve_threshold = nothing, 

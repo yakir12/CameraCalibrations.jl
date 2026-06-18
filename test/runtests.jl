@@ -92,6 +92,77 @@ end
 
     end
 
+    @testset "Reference rectification" begin
+        ei = 1
+        sz = size(FileIO.load(CALIB.files[ei]))
+        center = RowCol(sz[1] / 2, sz[2] / 2)
+        north = RowCol(sz[1] / 4, sz[2] / 2)   # a quarter of the way down, i.e. above the center
+
+        @testset "Invalid combinations error" begin
+            @test_throws Exception only_scale(1.0; center = center)                    # center without index
+            @test_throws Exception only_scale(1.0; north = north)                      # north without center/index
+            @test_throws Exception only_scale(1.0; center = center, north = north)     # north + center without index
+            @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; center = center)
+        end
+
+        @testset "Valid combinations construct" begin
+            @test only_scale(1.0) isa Calibration
+            @test only_scale(1.0; extrinsic_index = 1) isa Calibration
+            @test only_scale(1.0; extrinsic_index = 1, center = center) isa Calibration
+            @test only_scale(1.0; extrinsic_index = 1, center = center, north = north) isa Calibration
+        end
+
+        c, _ = fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = ei, center, north)
+
+        @testset "Centering" begin
+            @test rectification(c)(c.center) ≈ SVector(0, 0) atol = 1e-6
+        end
+
+        @testset "North alignment" begin
+            p = rectification(c)(c.north)
+            @test isapprox(p[1], 0; atol = 1e-6)
+            @test p[2] > 0
+        end
+
+        @testset "Orientation (no mirror)" begin
+            f = rectification(c)
+            p0 = RowCol(sz[1] ÷ 2, sz[2] ÷ 2)
+            ε = 1.0
+            d1 = (f(p0 + RowCol(ε, 0)) - f(p0)) / ε
+            d2 = (f(p0 + RowCol(0, ε)) - f(p0)) / ε
+            J = hcat(d1, d2)
+            @test det(J) > 0
+        end
+
+        @testset "Robustness" begin
+            # extrinsic_index required
+            cnone = fit(CALIB.files, CALIB.n_corners, CALIB.checker_size)[1]
+            @test_throws Exception rectification(cnone)
+            # center, no north → plain centered map (no rotation), and still centered
+            ccenter, _ = fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = ei, center)
+            @test isnothing(ccenter.north)
+            @test rectification(ccenter)(ccenter.center) ≈ SVector(0, 0) atol = 1e-6
+            # index only → equivalent to the plain 2-arg deskew
+            cidx, _ = fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = ei)
+            i = RowCol(1, 2)
+            @test rectification(cidx)(i) == rectification(cidx, ei)(i)
+            # existing 2-arg behaviour intact
+            @test rectification(c, ei)(i) == c(i, ei)[[1, 2]]
+        end
+
+        @testset "JSON round-trip preserves metadata" begin
+            copy = mktempdir() do path
+                file = joinpath(path, "calibration.json")
+                CameraCalibrations.save(file, c)
+                CameraCalibrations.load(file)
+            end
+            @test copy.center ≈ c.center
+            @test copy.north ≈ c.north
+            @test copy.extrinsic_index == c.extrinsic_index
+            @test rectification(copy)(copy.center) ≈ rectification(c)(c.center) atol = 1e-6
+        end
+    end
+
     @testset "IO" begin
         @testset "$c" for c in (Calibration, CalibrationIO)
             for _ in 1:100
@@ -102,6 +173,11 @@ end
                     CameraCalibrations.load(file)
                 end
                 @test org.files == copy.files
+                # `copy` is always a `Calibration` (load reconstructs one), so its metadata is
+                # narrowed to `Float32`; compare with a tolerance loose enough for that narrowing.
+                @test isapprox(org.center, copy.center; atol = 1e-5)
+                @test isapprox(org.north, copy.north; atol = 1e-5)
+                @test org.extrinsic_index == copy.extrinsic_index
             end
         end
         @testset "MATLAB" begin
@@ -154,10 +230,20 @@ end
         @info "Julia is running with only 1 thread, skipping multithreaded tests"
     end
 
-    @testset "Plotting" begin 
+    @testset "Plotting" begin
         mktempdir() do plot_folder
             fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; CALIB.aspect, plot_folder)
             @test readdir(plot_folder) == basename.(CALIB.files)
+        end
+
+        @testset "Rectified extrinsic" begin
+            mktempdir() do plot_folder
+                sz = size(FileIO.load(CALIB.files[1]))
+                center = RowCol(sz[1] / 2, sz[2] / 2)
+                north = RowCol(sz[1] / 4, sz[2] / 2)
+                fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; CALIB.aspect, plot_folder, extrinsic_index = 1, center, north)
+                @test "rectified_extrinsic.png" in readdir(plot_folder)
+            end
         end
     end
 

@@ -1,6 +1,6 @@
 module CameraCalibrations
 
-using CoordinateTransformations: CoordinateTransformations, AffineMap, LinearMap, PerspectiveMap, ∘
+using CoordinateTransformations: CoordinateTransformations, AffineMap, LinearMap, PerspectiveMap, Translation, ∘
 using ImageBase: ImageBase, @colorant_str, Gray, RGB, channelview, norm, rawview, ⋅
 using ImageDraw: ImageDraw, Cross, Point, draw!
 using ImageTransformations: ImageTransformations, warp
@@ -10,7 +10,7 @@ using OhMyThreads: OhMyThreads, tcollect
 using OpenCV: OpenCV
 using Polynomials: Polynomials, Polynomial
 using Random: Random, AbstractRNG
-using Rotations: Rotations, RotationVec
+using Rotations: Rotations, RotationVec, Angle2d
 using StaticArrays: StaticArrays, SDiagonal, SVector, pop, push
 using Statistics: Statistics, mean
 using FileIO: FileIO
@@ -27,5 +27,6 @@ include("io.jl")
 include("detect_fit.jl")
 include("buildcalibrations.jl")
 include("plot_calibration.jl")
+include("plot_rectification.jl")
 
 end

@@ -50,6 +50,28 @@ i1 = c(xyz, 1) # convert to pixel coordinates
 
 The error term, `ϵ`, includes the reprojection, projection, distance, and inverse errors for the calibration. `distance` measures the mean error of the distance between all adjacent checkerboard corners from the expected `checker_size`. `inverse` measures the mean error of applying the calibration's transformation and its inverse 100 times.
 
+### Reference frame (center / north)
+
+Besides deskewing pixels to world `(x, y)`, a calibration can carry an optional *reference frame*: a chosen origin (`center`), a chosen "up" direction (`north`), and the image they refer to (`extrinsic_index`). These are supplied at construction time as keyword arguments to `fit` (or `only_scale`):
+
+```julia
+c, ϵ = fit(files, n_corners, checker_size;
+           extrinsic_index = 1,        # which image the reference pixels live in
+           center = RowCol(540, 960),  # (row, col) pixel that becomes the origin (0, 0)
+           north  = RowCol(40, 960))   # (row, col) pixel that defines the +y (up) direction
+```
+
+The rule is **north ⇒ center ⇒ extrinsic_index**: a `north` requires both a `center` and an `extrinsic_index`, and a `center` requires an `extrinsic_index` (an `extrinsic_index` on its own, or no metadata at all, is fine). Invalid combinations error at construction.
+
+Get the reference-frame transform — a function from a `RowCol` pixel to its `(x, y)` coordinate in the reference frame — with the single-argument `rectification`:
+
+```julia
+ref = rectification(c)         # uses c.center / c.north / c.extrinsic_index
+ref(c.center) ≈ [0, 0]         # center maps to the origin
+```
+
+Conventions: `RowCol` is `(row, col)` with row increasing downward; the reference frame places `center` at `(0, 0)`, rotates `center → north` onto `+y` (up), with `+x` to the right (right-handed). The two-argument `rectification(c, extrinsic_index)` still returns the plain deskew (no reference frame). When `plot_folder`, `center`, and `extrinsic_index` are all set, `fit` also writes `rectified_extrinsic.png` showing the chosen image rendered in this reference frame (center centered, north up).
+
 ### Using im-memory images
 The syntax for in-memory images is very similar to that of files. The difference is that here we must specify "`tags`" (a name in the form of a string) for each of the images. Because corner detection can fail in one or more of the images (due to occlusion, low image quality, etc), it can be important for the user to know *which* of the images failed. Thsi becomes important if say one of the images that failed was the one you had hoped to use for the extrinsic parameters. The images must also be gray-scale.
 

@@ -101,6 +101,10 @@ When `plot_folder` is specified, saves rectified calibration images with:
 
 This visualizes calibration quality—crosses should overlap and checkerboards should appear square.
 
+### Reference frame (meta.jl, plot_rectification.jl)
+
+A `Calibration` can carry optional reference-frame metadata: `center` and `north` (both `Union{Nothing, RowCol}`) and `extrinsic_index` (`Union{Nothing, Int}`). These are supplied only at construction time as keyword arguments to `fit`/`only_scale`/`loadMAT` (or read from a JSON file). `_validate_reference` (meta.jl) enforces north ⇒ center ⇒ extrinsic_index and is called from every construction path (the `Calibration` convenience constructor and `Calibration(cio::CalibrationIO)`). The single-argument `rectification(c)` (meta.jl) builds the referenced map: `pop ∘ image2real[extrinsic_index]`, then `Translation(-center)`, then a rotation aligning `center → north` to `+y`. The two-argument `rectification(c, i)` remains the plain deskew. `plot_rectification.jl` warps the chosen extrinsic image into this frame (`rectified_extrinsic.png`), rendered +y-up so it reads like the original photo without mirroring (orientation is guaranteed by `det(J) > 0`, asserted in a regression test).
+
 ## Important Constraints
 
 ### Julia Version Restriction

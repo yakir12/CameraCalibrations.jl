@@ -22,14 +22,35 @@ struct Calibration
     files::Vector{String}
     real2image::Vector{ComposedFunction}
     image2real::Vector{ComposedFunction}
+    center::Union{Nothing, RowCol}
+    north::Union{Nothing, RowCol}
+    extrinsic_index::Union{Nothing, Int}
 end
 
-function Calibration(intrinsic, extrinsics, scale, k, files)
+"""
+    _validate_reference(extrinsic_index, center, north)
+Check that the optional reference-frame metadata is a valid combination. The rule is north ⇒ center ⇒
+`extrinsic_index`: a `north` direction requires both a `center` and an `extrinsic_index`, and a `center` requires an
+`extrinsic_index`. An `extrinsic_index` alone (or no metadata at all) is fine.
+"""
+function _validate_reference(extrinsic_index, center, north)
+    if !isnothing(north) && (isnothing(center) || isnothing(extrinsic_index))
+        error("`north` requires both `center` and `extrinsic_index`")
+    elseif !isnothing(center) && isnothing(extrinsic_index)
+        error("`center` requires `extrinsic_index`")
+    end
+    return nothing
+end
+
+function Calibration(intrinsic, extrinsics, scale, k, files; center = nothing, north = nothing, extrinsic_index = nothing)
+    center = isnothing(center) ? nothing : RowCol(center)
+    north = isnothing(north) ? nothing : RowCol(north)
+    _validate_reference(extrinsic_index, center, north)
     distort(rc) = lens_distortion(rc, k)
     real2image = .∘(Ref(intrinsic), distort, Ref(PerspectiveMap()), extrinsics, Ref(scale))
     inv_scale, inv_extrinsics, inv_perspective_maps, inv_distort, inv_intrinsic = img2obj(intrinsic, extrinsics, scale, k)
     image2real = .∘(Ref(inv_scale), inv_extrinsics, inv_perspective_maps, inv_distort, Ref(inv_intrinsic))
-    Calibration(intrinsic, extrinsics, scale, k, files, real2image, image2real)
+    Calibration(intrinsic, extrinsics, scale, k, files, real2image, image2real, center, north, extrinsic_index)
 end
 
 """
@@ -94,4 +115,24 @@ Convert the x, y, z StaticArray `xyz` to its pixel-coordinate equivalent, `RowCo
 Return a function that accepts an instance of `::RowCol` and converts it to its real-world equivalent for the extrinsic parameters from the `extrinsic_index` image, without its third dimension (which would be ≈ 0): an `xy` coordinate.
 """
 rectification(c::Calibration, extrinsic_index) = pop ∘ c.image2real[extrinsic_index]
+
+"""
+    rectification(c)
+Return a function that accepts an instance of `::RowCol` and converts it to its real-world `xy` coordinate in the
+reference frame defined by the calibration's `center`, `north`, and `extrinsic_index` metadata. Requires at least an
+`extrinsic_index`. When a `center` is set it becomes the origin `(0, 0)`; when a `north` is also set the `center →
+north` direction is rotated to point towards `+y` (up). With only an `extrinsic_index` this is the plain deskew,
+equivalent to `rectification(c, c.extrinsic_index)`.
+"""
+function rectification(c::Calibration)
+    isnothing(c.extrinsic_index) && error("rectification(c) requires an `extrinsic_index`; use rectification(c, i) for a plain deskew")
+    f = pop ∘ c.image2real[c.extrinsic_index]
+    isnothing(c.center) && return f
+    cc = f(c.center)
+    f = Translation(-cc) ∘ f
+    isnothing(c.north) && return f
+    p = f(c.north)
+    f = LinearMap(Angle2d(π/2 - atan(p[2], p[1]))) ∘ f
+    return f
+end
 
