@@ -121,6 +121,23 @@ Return a function that accepts an instance of `::RowCol` and converts it to its 
 rectification(c::Calibration, extrinsic_index) = pop ∘ c.image2real[extrinsic_index]
 
 """
+    reference_affine(c)
+The planar (2D) part of `rectification(c)`: a `Translation` placing `center` at the origin `(0, 0)` and, when a
+`north` is set, a rotation aligning the `center → north` direction to `+y` (up). It is the single source of truth for
+the reference-frame geometry, so that `rectification(c) == reference_affine(c) ∘ pop ∘ image2real[extrinsic_index]`
+and the rectified-image plot share exactly the same transform. Assumes `center` (hence `extrinsic_index`) is set.
+Returned as an invertible `CoordinateTransformations` map.
+"""
+function reference_affine(c::Calibration)
+    f = pop ∘ c.image2real[c.extrinsic_index]
+    cc = f(c.center)
+    A = Translation(-cc)
+    isnothing(c.north) && return A
+    p = f(c.north) - cc
+    return LinearMap(Angle2d(π/2 - atan(p[2], p[1]))) ∘ A
+end
+
+"""
     rectification(c)
 Return a function that accepts an instance of `::RowCol` and converts it to its real-world `xy` coordinate in the
 reference frame defined by the calibration's `center`, `north`, and `extrinsic_index` metadata. Requires at least an
@@ -130,13 +147,8 @@ equivalent to `rectification(c, c.extrinsic_index)`.
 """
 function rectification(c::Calibration)
     isnothing(c.extrinsic_index) && error("rectification(c) requires an `extrinsic_index`; use rectification(c, i) for a plain deskew")
-    f = pop ∘ c.image2real[c.extrinsic_index]
-    isnothing(c.center) && return f
-    cc = f(c.center)
-    f = Translation(-cc) ∘ f
-    isnothing(c.north) && return f
-    p = f(c.north)
-    f = LinearMap(Angle2d(π/2 - atan(p[2], p[1]))) ∘ f
-    return f
+    base = pop ∘ c.image2real[c.extrinsic_index]
+    isnothing(c.center) && return base
+    return reference_affine(c) ∘ base
 end
 

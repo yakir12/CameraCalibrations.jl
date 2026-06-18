@@ -162,6 +162,13 @@ end
             @test rectification(copy)(copy.center) ≈ rectification(c)(c.center) atol = 1e-6
         end
 
+        @testset "rectification factors through reference_affine" begin
+            base = StaticArrays.pop ∘ c.image2real[c.extrinsic_index]
+            f = CameraCalibrations.reference_affine(c) ∘ base
+            i = RowCol(3, 4)
+            @test rectification(c)(i) ≈ f(i)
+        end
+
         @testset "Extrinsic index validation" begin
             # out-of-range index errors early (at construction), not later at use
             @test_throws Exception only_scale(1.0; extrinsic_index = 2, center = center)

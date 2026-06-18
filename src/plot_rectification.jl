@@ -1,20 +1,3 @@
-"""
-    reference_affine(c)
-The affine (planar) part of `rectification(c)`: the `Translation` to the `center` origin and, when a `north` is set,
-the rotation aligning `center → north` to `+y`. Equivalent to `rectification(c)` with the leading `pop ∘
-image2real[extrinsic_index]` factored out, so that `rectification(c) == reference_affine(c) ∘ pop ∘
-image2real[extrinsic_index]`. Returned as an invertible `CoordinateTransformations` map.
-"""
-function reference_affine(c::Calibration)
-    f = pop ∘ c.image2real[c.extrinsic_index]
-    cc = f(c.center)
-    A = Translation(-cc)
-    isnothing(c.north) && return A
-    p = f(c.north) - cc
-    θ = π/2 - atan(p[2], p[1])
-    return LinearMap(Angle2d(θ)) ∘ A
-end
-
 plot_rectification(::Nothing, c::Calibration, imgpointss, n_corners, checker_size) = nothing
 
 """
