@@ -46,9 +46,16 @@ end
 Base.rand(rng::AbstractRNG, ::Random.SamplerType{CalibrationIO}) = CalibrationIO(AffineMap(rand(rng, 2, 2), rand(rng, 2)), [AffineMap(rand(rng, 3, 3), rand(rng, 3)) for _ in 1:5], LinearMap(rand(rng, 3, 3)), rand(rng, 3), [String(rand(rng, 'a':'z', 5)) for _ in 1:5]; center = rand(rng, 2), north = rand(rng, 2), extrinsic_index = rand(rng, 1:5))
 Base.rand(rng::AbstractRNG, ::Random.SamplerType{Calibration}) = Calibration(rand(rng, CalibrationIO))
 
-load(file; extrinsic_index::Int = 1, center = nothing, north = nothing) = if read(file, 6) == codeunits("MATLAB")
-    loadMAT(file; extrinsic_index, center, north)
-else
+_ismatlab(file) = read(file, 6) == codeunits("MATLAB")
+
+"""
+    load(file)
+Load a `Calibration` from a JSON file written by [`save`](@ref). All reference-frame metadata (`center`, `north`,
+`extrinsic_index`) is read from the file. To load a MATLAB Camera Calibrator `.mat` file, use [`loadMAT`](@ref)
+instead.
+"""
+function load(file)
+    _ismatlab(file) && error("\"$file\" looks like a MATLAB file; use `loadMAT` to load MATLAB calibrations")
     Calibration(JSON.parsefile(file, CalibrationIO))
 end
 
@@ -57,7 +64,14 @@ save(file, cio::CalibrationIO) = JSON.json(file, cio)
 save(file, c::Calibration) = JSON.json(file, CalibrationIO(c))
 
 
+"""
+    loadMAT(file; extrinsic_index = 1, center = nothing, north = nothing)
+Load a `Calibration` from a MATLAB Camera Calibrator `.mat` file (read-only). Since `.mat` files do not carry this
+package's reference-frame metadata, supply it here: `extrinsic_index` selects the reference image and `center`/`north`
+define the reference frame. To load this package's own JSON files, use [`load`](@ref) instead.
+"""
 function loadMAT(file; extrinsic_index::Int = 1, center = nothing, north = nothing)
+    _ismatlab(file) || error("\"$file\" does not look like a MATLAB file; use `load` for this package's JSON calibrations")
     dict = matread(file)
     k = only(keys(dict))
     dict = dict[k]

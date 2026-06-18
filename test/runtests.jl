@@ -206,7 +206,15 @@ end
             end
         end
         @testset "MATLAB" begin
-            @test_nowarn CameraCalibrations.load(joinpath(@__DIR__(), "example", "cameraParams.mat"))
+            matfile = joinpath(@__DIR__(), "example", "cameraParams.mat")
+            @test_nowarn CameraCalibrations.loadMAT(matfile)
+            # explicit loaders reject the wrong format with a helpful error
+            @test_throws Exception CameraCalibrations.load(matfile)            # MATLAB file through the JSON loader
+            mktempdir() do path
+                file = joinpath(path, "c.json")
+                CameraCalibrations.save(file, only_scale(1.0))
+                @test_throws Exception CameraCalibrations.loadMAT(file)        # JSON file through the MATLAB loader
+            end
         end
 
         @testset "only scale" begin

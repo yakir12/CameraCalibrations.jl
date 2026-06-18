@@ -81,9 +81,11 @@ The package is thread-safe. Corner detection uses `OhMyThreads.tcollect` for par
 
 ### Serialization (io.jl)
 
-Supports two formats:
-- **JSON**: Uses CalibrationIO for serialization, auto-detected on load
-- **MATLAB**: Loads `.mat` files from MATLAB's Camera Calibrator app (read-only)
+Supports two formats, with one explicit loader each (no auto-detection):
+- **JSON**: `load(file)` reads this package's own format via CalibrationIO; all reference-frame metadata comes from the file.
+- **MATLAB**: `loadMAT(file; extrinsic_index, center, north)` loads `.mat` files from MATLAB's Camera Calibrator app (read-only); reference-frame metadata is supplied as kwargs since `.mat` files don't carry it.
+
+Each loader errors helpfully (via `_ismatlab`) if handed the other format.
 
 The CalibrationIO struct uses regular matrices/vectors instead of StaticArrays/RotationVec types for JSON compatibility. Conversion functions handle the mapping between runtime-efficient types (Calibration) and serialization-friendly types (CalibrationIO).
 
@@ -120,7 +122,7 @@ The `radial_parameters` argument (1–3) controls which radial distortion coeffi
 
 ### Adding New File Format Support
 Extend `io.jl` by:
-1. Add detection logic in `load()` function
+1. Add a dedicated loader function for the format (e.g. `loadMAT`), rather than overloading `load` (which is JSON-only)
 2. Implement parser that returns a `CalibrationIO` object
 3. The existing `Calibration(cio::CalibrationIO)` constructor handles the rest
 

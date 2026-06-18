@@ -97,12 +97,17 @@ To save a `Calibration` object, use the `save` function:
 save("calibration.json", c)
 ```
 
-To load a `Calibration` object, use the `load` function:
+To load a `Calibration` object there is one loader per format. Use `load` for this package's own JSON files (all reference-frame metadata is read from the file):
 ```julia
 c = load("calibration.json")
 ```
 
-The `load` function will automatically detect the file format.
+Use `loadMAT` for MATLAB Camera Calibrator `.mat` files (read-only). Since `.mat` files do not carry this package's reference-frame metadata, supply it at load time if you need it:
+```julia
+c = loadMAT("cameraParams.mat"; extrinsic_index = 1, center = RowCol(540, 960), north = RowCol(40, 960))
+```
+
+Each loader rejects the wrong format with a helpful error.
 
 ## Features
 - [x] thread safe
