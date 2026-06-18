@@ -13,8 +13,12 @@ function _extrinsic_tag(extrinsic_index::Integer, tags)
     return tags[extrinsic_index]
 end
 function _extrinsic_tag(extrinsic_index::AbstractString, tags)
-    extrinsic_index in tags || error("`extrinsic_index` (\"$extrinsic_index\") is not one of the image tags/file names")
-    return extrinsic_index
+    extrinsic_index in tags && return extrinsic_index
+    # fall back to matching by file name (basename), e.g. when `tags` are full paths
+    matches = findall(t -> basename(t) == extrinsic_index, tags)
+    isempty(matches) && error("`extrinsic_index` (\"$extrinsic_index\") is not one of the image tags/file names")
+    length(matches) > 1 && error("`extrinsic_index` (\"$extrinsic_index\") matches more than one image; pass the full tag to disambiguate")
+    return tags[only(matches)]
 end
 
 # After detection (which drops images whose corners weren't found), map the chosen extrinsic tag to its position in
@@ -32,10 +36,9 @@ end
 Build a calibration object. `tags` are references (just names) to each of the images in `imgs`. Typically, one of these will be the chosen image for the extrinsics parameters. `imgs` are the images of the checkerboard. `n_corners` is a tuple of the number of corners in each of the sides of the checkerboard. `checker_size` is the physical size of the checker (e.g. in cm). `aspect` is the aspect ratio of the images in `imgs` (most commonly 1). `radial_parameters` controls how many radial lens distortion parameters are included in the model. `extrinsic_index` selects the reference image either by its position in `tags` (an `Int`) or by its tag/file name (a `String`); it is resilient to images dropped during corner detection. Finally, `plot_folder` is the path to a directory where diagnostic images can be saved to.
 """
 function fit(tags::Vector{T}, imgs::Vector{Matrix{S}}, n_corners, checker_size; aspect = 1, radial_parameters::Int = 1, plot_folder::Union{Nothing, String} = nothing, center = nothing, north = nothing, extrinsic_index = nothing) where {T <: AbstractString, S <: Gray}
-    @assert length(tags) == length(imgs) "`tags` and `imgs` should have the same length"
+    length(tags) == length(imgs) || throw(ArgumentError("`tags` and `imgs` should have the same length"))
     extrinsic_tag = _extrinsic_tag(extrinsic_index, tags)
-    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol = detect_fit(tags, imgs, n_corners, radial_parameters, aspect)
-    extrinsic_index = _resolve_extrinsic_index(extrinsic_tag, files)
+    files, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol, extrinsic_index = detect_fit(tags, imgs, n_corners, radial_parameters, aspect, extrinsic_tag)
     objpoints = objpoints .* checker_size
     intrinsic, extrinsics, scale = obj2img(Rs, ts, frow, fcol, crow, ccol, checker_size)
     c = Calibration(intrinsic, extrinsics, scale, k, files; center, north, extrinsic_index)

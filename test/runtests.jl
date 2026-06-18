@@ -183,10 +183,16 @@ end
             @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = 0)
             @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = length(CALIB.files) + 1)
 
-            # select the extrinsic image by its file name (a String)
+            # select the extrinsic image by its file name (a String): exact tag, or by basename when tags are paths
             cstr, _ = fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = CALIB.files[2])
             @test cstr.files[cstr.extrinsic_index] == CALIB.files[2]
+            cbn, _ = fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = basename(CALIB.files[2]))
+            @test cbn.files[cbn.extrinsic_index] == CALIB.files[2]
             @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = "not-a-file.png")
+            # an ambiguous basename (two images share it) errors rather than picking one
+            dup_tags = ["dirA/x.png", "dirB/x.png"]
+            dup_imgs = [Gray.(FileIO.load(CALIB.files[1])), Gray.(FileIO.load(CALIB.files[2]))]
+            @test_throws Exception fit(dup_tags, dup_imgs, CALIB.n_corners, CALIB.checker_size; extrinsic_index = "x.png")
 
             # a dropped image (failed corner detection) must not shift which image extrinsic_index refers to
             imgs = [Gray.(FileIO.load(f)) for f in CALIB.files]

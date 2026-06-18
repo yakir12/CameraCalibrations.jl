@@ -38,14 +38,16 @@ function fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspe
     return (k = dist[[1,2,5]], Rs = r, ts = t, frow = cammat[1,1], fcol = cammat[2,2], crow = cammat[3,1], ccol = cammat[3,2])
 end
 
-function detect_fit(tags, imgs, n_corners, radial_parameters, aspect)
+function detect_fit(tags, imgs, n_corners, radial_parameters, aspect, extrinsic_tag = nothing)
     fi = tcollect(_detect_corners(img, n_corners) for img in imgs)
     keep = findall(!ismissing, fi)
     tags = tags[keep]
+    isempty(tags) && error("No checkers were detected in any of the images, perhaps try a different `n_corners` (e.g. not $n_corners)")
+    # resolve (and validate) the chosen extrinsic image now, before the costly model fit, so a bad choice fails fast
+    extrinsic_index = _resolve_extrinsic_index(extrinsic_tag, tags)
     imgpointss = fi[keep]
-    @assert !isempty(tags) "No checkers were detected in any of the images, perhaps try a different `n_corners` (e.g. not $n_corners)"
     objpoints = XYZ.(Tuple.(CartesianIndices((0:(n_corners[1] - 1), 0:(n_corners[2] - 1), 0:0))))
     sz = size(imgs[keep[1]])   # size of a kept image; imgs[1] itself may have been dropped (failed detection)
     k, Rs, ts, frow, fcol, crow, ccol = fit_model(sz, objpoints, imgpointss, n_corners, radial_parameters, aspect)
-    return (; tags, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol)
+    return (; tags, objpoints, imgpointss, sz, k, Rs, ts, frow, fcol, crow, ccol, extrinsic_index)
 end

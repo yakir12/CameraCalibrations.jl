@@ -1,5 +1,3 @@
-plot_rectification(::Nothing, c::Calibration, imgpointss, n_corners, checker_size) = nothing
-
 """
     plot_rectification
 Save `rectified_extrinsic.png` to `plot_folder`: the chosen extrinsic image (`c.files[c.extrinsic_index]`) warped
