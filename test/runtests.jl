@@ -162,6 +162,14 @@ end
             @test rectification(copy)(copy.center) ≈ rectification(c)(c.center) atol = 1e-6
         end
 
+        @testset "North too close to center" begin
+            # below the 10-pixel minimum → error (angular direction is unreliable)
+            @test_throws Exception fit(CALIB.files, CALIB.n_corners, CALIB.checker_size; extrinsic_index = ei, center, north = center .+ RowCol(5, 0))
+            @test_throws Exception only_scale(1.0; extrinsic_index = 1, center = RowCol(100, 100), north = RowCol(103, 100))
+            # exactly at the threshold (10 px) is allowed
+            @test only_scale(1.0; extrinsic_index = 1, center = RowCol(100, 100), north = RowCol(110, 100)) isa Calibration
+        end
+
         @testset "rectification factors through reference_affine" begin
             base = StaticArrays.pop ∘ c.image2real[c.extrinsic_index]
             f = CameraCalibrations.reference_affine(c) ∘ base

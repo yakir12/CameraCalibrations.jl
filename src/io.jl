@@ -43,7 +43,7 @@ function Calibration(cio::CalibrationIO)
     return Calibration(intrinsic, extrinsics, scale, cio.k, cio.files, real2image, image2real, center, north, cio.extrinsic_index)
 end
 
-Base.rand(rng::AbstractRNG, ::Random.SamplerType{CalibrationIO}) = CalibrationIO(AffineMap(rand(rng, 2, 2), rand(rng, 2)), [AffineMap(rand(rng, 3, 3), rand(rng, 3)) for _ in 1:5], LinearMap(rand(rng, 3, 3)), rand(rng, 3), [String(rand(rng, 'a':'z', 5)) for _ in 1:5]; center = rand(rng, 2), north = rand(rng, 2), extrinsic_index = rand(rng, 1:5))
+Base.rand(rng::AbstractRNG, ::Random.SamplerType{CalibrationIO}) = CalibrationIO(AffineMap(rand(rng, 2, 2), rand(rng, 2)), [AffineMap(rand(rng, 3, 3), rand(rng, 3)) for _ in 1:5], LinearMap(rand(rng, 3, 3)), rand(rng, 3), [String(rand(rng, 'a':'z', 5)) for _ in 1:5]; center = rand(rng, 2), north = rand(rng, 2) .+ 20, extrinsic_index = rand(rng, 1:5))
 Base.rand(rng::AbstractRNG, ::Random.SamplerType{Calibration}) = Calibration(rand(rng, CalibrationIO))
 
 _ismatlab(file) = read(file, 6) == codeunits("MATLAB")

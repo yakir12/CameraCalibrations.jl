@@ -27,12 +27,17 @@ struct Calibration
     extrinsic_index::Union{Nothing, Int}
 end
 
+# Minimum allowed distance, in pixels, between `center` and `north`. Below this the direction `center → north` is too
+# short to estimate the alignment angle reliably (a small pixel error implies a large angular error).
+const MIN_NORTH_DISTANCE = 10
+
 """
     _validate_reference(extrinsic_index, center, north, n_extrinsics)
 Check that the optional reference-frame metadata is a valid combination. The rule is north ⇒ center ⇒
 `extrinsic_index`: a `north` direction requires both a `center` and an `extrinsic_index`, and a `center` requires an
 `extrinsic_index`. An `extrinsic_index` alone (or no metadata at all) is fine. When given, `extrinsic_index` must be
-a valid index into the `n_extrinsics` extrinsic images.
+a valid index into the `n_extrinsics` extrinsic images, and `north` must be at least `MIN_NORTH_DISTANCE` pixels from
+`center`.
 """
 function _validate_reference(extrinsic_index, center, north, n_extrinsics)
     if !isnothing(north) && (isnothing(center) || isnothing(extrinsic_index))
@@ -42,6 +47,9 @@ function _validate_reference(extrinsic_index, center, north, n_extrinsics)
     end
     if !isnothing(extrinsic_index) && !(1 ≤ extrinsic_index ≤ n_extrinsics)
         error("`extrinsic_index` ($extrinsic_index) must be between 1 and the number of extrinsic images ($n_extrinsics)")
+    end
+    if !isnothing(north) && norm(north - center) < MIN_NORTH_DISTANCE
+        error("`north` is only $(round(norm(north - center), digits = 1)) pixels from `center`; they must be at least $MIN_NORTH_DISTANCE pixels apart for a reliable direction")
     end
     return nothing
 end
