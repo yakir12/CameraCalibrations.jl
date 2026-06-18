@@ -215,6 +215,19 @@ end
         end
     end
 
+    @testset "Lens distortion inverse" begin
+        # round-trip forward → inverse must recover the undistorted point, including barrel (negative k1) lenses,
+        # over the well-posed radius range. (The previous Optim-based inverse was inaccurate for barrel distortion.)
+        ld    = CameraCalibrations.lens_distortion
+        inv_ld = CameraCalibrations.inv_lens_distortion
+        for k in ([-0.2, 0.0, 0.0], [-0.3, 0.1, 0.0], [-0.3, 0.1, -0.05], [0.2, -0.05, 0.0], [0.4, 0.0, 0.0])
+            for r in 0.0:0.1:0.9, θ in range(0, 2π, length = 9)[1:8]
+                v  = SVector(r*cos(θ), r*sin(θ))
+                @test inv_ld(ld(v, k), k) ≈ v atol = 1e-8
+            end
+        end
+    end
+
     @testset "IO" begin
         @testset "$c" for c in (Calibration, CalibrationIO)
             for _ in 1:100

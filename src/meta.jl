@@ -66,29 +66,68 @@ function Calibration(intrinsic, extrinsics, scale, k, files; center = nothing, n
 end
 
 """
+    lens_distortion_factor(r, k)
+The radial distortion factor `f(r) = 1 + k₁r² + k₂r⁴ + k₃r⁶` for up to 3 radial coefficients, so that
+`lens_distortion(v, k) == v * f(|v|)`. Single source of truth shared by the forward and inverse distortion.
+"""
+function lens_distortion_factor(r, k)
+    f = 1.0
+    r2p = 1.0
+    for ki in k
+        r2p *= r^2
+        f += ki * r2p
+    end
+    return f
+end
+
+"""
     lens_distortion
 Lens distortion for up to 3 radial coefficients.
 """
-function lens_distortion(v, k)
-    kk = zeros(7)
-    kk[1] = 1
-    for (i, ki) in zip(3:2:7, k)
-        kk[i] = ki
-    end
-    p = Polynomial(kk)
-    return v*p(norm(v))
+lens_distortion(v, k) = v * lens_distortion_factor(norm(v), k)
+
+# End of the invertible (monotone) branch of the forward radial map g(r) = r·f(r): the smallest positive `r` where
+# g'(r) = 1 + 3k₁r² + 5k₂r⁴ + 7k₃r⁶ = 0 (beyond it the distortion "folds" and the inverse is ill-posed). `Inf` if
+# g is monotone everywhere (e.g. pincushion). Depends only on `k`, so compute once per calibration.
+function _first_critical(k)
+    h = Polynomial([1.0; [(2i + 1) * ki for (i, ki) in enumerate(k)]])   # in s = r²
+    ss = roots(h)
+    pos = [real(s) for s in ss if abs(imag(s)) < 1e-9 && real(s) > 1e-12]
+    isempty(pos) ? Inf : sqrt(minimum(pos))
 end
 
+"""
+    inv_lens_distortion(v2, k[, rstar])
+Inverse radial lens distortion for up to 3 radial coefficients. Since the distortion is radial, `v` and `v2` are
+collinear; we solve the scalar monotone equation `r·f(r) = |v2|` for the undistorted radius `r` by bracketed
+bisection (`rstar = _first_critical(k)` is the bracket's upper bound). If `v2` lies beyond the fold (no physical
+preimage — the peripheral "donut" region) the radius is clamped to the fold and a warning is issued.
+"""
+inv_lens_distortion(v2, k) = inv_lens_distortion(v2, k, _first_critical(k))
 
-"""
-    inv_lens_distortion
-Inverse lens distortion for up to 3 radial coefficients.
-"""
-function inv_lens_distortion(v2, k)
-    f(v) = norm(lens_distortion(v, k) - v2)
-    x0 = [v2...]
-    o = optimize(f, x0)
-    SVector{2, Float64}(o.minimizer)
+function inv_lens_distortion(v2, k, rstar)
+    rd = norm(v2)
+    rd == 0 && return SVector{2, Float64}(0.0, 0.0)
+    g(r) = r * lens_distortion_factor(r, k)
+    if isfinite(rstar)
+        if g(rstar) < rd
+            @warn "inv_lens_distortion: point beyond the invertible radius (radial distortion fold); clamping" maxlog = 1
+            return SVector{2, Float64}(v2 * (rstar / rd))
+        end
+        a, b = 0.0, rstar
+    else
+        a, b = 0.0, rd
+        while g(b) < rd && b < 1e8
+            b *= 2
+        end
+    end
+    for _ in 1:200
+        m = (a + b) / 2
+        g(m) < rd ? (a = m) : (b = m)
+        b - a < 1e-14 && break
+    end
+    r = (a + b) / 2
+    return SVector{2, Float64}(v2 * (r / rd))
 end
 
 # this is the inverse prespective map
@@ -106,7 +145,8 @@ end
 function img2obj(intrinsic, extrinsics, scale, k)
     inv_extrinsics = inv.(extrinsics)
     inv_perspective_maps = get_inv_prespective_map.(inv_extrinsics)
-    inv_distort(rc) = inv_lens_distortion(rc, k)
+    rstar = _first_critical(k)   # depends only on k; compute once, reuse per pixel
+    inv_distort(rc) = inv_lens_distortion(rc, k, rstar)
     return inv(scale), inv_extrinsics, inv_perspective_maps, inv_distort, inv(intrinsic)
 end
 
